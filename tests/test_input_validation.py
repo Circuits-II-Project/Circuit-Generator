@@ -1,15 +1,15 @@
-# Pruebas pequeñas para el primer paso de validación.
+# Pruebas de las validaciones que el proyecto tiene hasta ahora.
 
 from __future__ import annotations
 
 import math
 import unittest
 
-from input_validation import is_valid_number, validate_circuit
+from input_validation import is_valid_number, validate_circuit, validate_nodes
 
 
 def valid_circuit() -> dict[str, object]:
-    """Return the smallest circuit that is valid in Step 1."""
+    """Return the smallest circuit that is valid through Step 2."""
 
     # Crea el circuito más pequeño que debería pasar este primer paso.
 
@@ -17,6 +17,7 @@ def valid_circuit() -> dict[str, object]:
         "circuit_id": "C001",
         "circuit_name": "Circuit 1",
         "circuit_type": "series",
+        "nodes": ["A", "B"],
     }
 
 
@@ -121,7 +122,7 @@ class BasicCircuitValidationTests(unittest.TestCase):
         # Queremos ver varios errores juntos para no corregir uno, ejecutar y
         # recién descubrir el siguiente.
 
-        circuit = {"circuit_id": "", "circuit_type": "unknown"}
+        circuit = {"circuit_id": "", "circuit_type": "unknown", "nodes": ["A", "B"]}
         is_valid, errors = validate_circuit(circuit)
 
         self.assertFalse(is_valid)
@@ -130,6 +131,50 @@ class BasicCircuitValidationTests(unittest.TestCase):
         self.assertIn("circuit_id", circuit["error_message"])
         self.assertIn("circuit_name", circuit["error_message"])
         self.assertIn("circuit_type", circuit["error_message"])
+
+
+class NodeValidationTests(unittest.TestCase):
+    # Prueba solamente las reglas de nodos agregadas en el Step 2.
+
+    def test_valid_nodes_are_accepted(self) -> None:
+        self.assertEqual(validate_nodes(["A", "B", "AA", "AB"]), [])
+
+    def test_nodes_must_be_a_list_with_at_least_two_items(self) -> None:
+        cases = ((None, "nodes must be a list"), ("A,B", "nodes must be a list"),
+                 ([], "at least two nodes"), (["A"], "at least two nodes"))
+
+        for nodes, text in cases:
+            with self.subTest(nodes=nodes):
+                self.assertTrue(any(text in error for error in validate_nodes(nodes)))
+
+    def test_node_names_must_be_uppercase_letters(self) -> None:
+        invalid_nodes = (["A", "a"], ["A", "A1"], ["A", "NODE_1"], ["A", 2])
+
+        for nodes in invalid_nodes:
+            with self.subTest(nodes=nodes):
+                self.assertNotEqual(validate_nodes(nodes), [])
+
+    def test_duplicate_nodes_are_rejected(self) -> None:
+        errors = validate_nodes(["A", "B", "A"])
+
+        self.assertTrue(any("duplicate node" in error for error in errors))
+
+    def test_validate_circuit_includes_node_errors(self) -> None:
+        circuit = valid_circuit()
+        circuit["nodes"] = ["A", "A"]
+        is_valid, errors = validate_circuit(circuit)
+
+        self.assertFalse(is_valid)
+        self.assertTrue(any("duplicate node" in error for error in errors))
+        self.assertIn("duplicate node", circuit["error_message"])
+
+    def test_missing_nodes_are_reported_by_validate_circuit(self) -> None:
+        circuit = valid_circuit()
+        circuit.pop("nodes")
+        is_valid, errors = validate_circuit(circuit)
+
+        self.assertFalse(is_valid)
+        self.assertTrue(any("nodes must be a list" in error for error in errors))
 
 
 if __name__ == "__main__":

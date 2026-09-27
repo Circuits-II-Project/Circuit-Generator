@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import math
+import re
 from numbers import Real
 
 
 # Estos son los tipos de circuito que el proyecto entiende por ahora.
 
 SUPPORTED_CIRCUIT_TYPES = {"series", "parallel", "series-parallel"}
+
+# Los nodos se escriben solo con letras mayúsculas, como A, B, AA o AB.
+
+NODE_PATTERN = re.compile(r"^[A-Z]+$")
 
 
 def is_valid_number(value: object) -> bool:
@@ -26,10 +31,48 @@ def is_valid_number(value: object) -> bool:
     )
 
 
-def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
-    """Validate the Step 1 fields and return ``(is_valid, errors)``."""
+def validate_nodes(nodes: object) -> list[str]:
+    """Return errors found in the circuit node list."""
 
-    # Revisa el ID, el nombre y el tipo de circuito, y devuelve los errores.
+    # Primero revisamos la lista porque el resto de las reglas necesita nodos
+    # para poder tener sentido.
+
+    if not isinstance(nodes, list):
+        return ["nodes must be a list."]
+
+    errors: list[str] = []
+
+    # Con menos de dos nodos no hay entre qué puntos conectar un circuito.
+
+    if len(nodes) < 2:
+        errors.append("nodes must contain at least two nodes.")
+
+    # Guardamos los nodos ya vistos para saber si alguien escribió uno dos veces.
+
+    seen_nodes: set[str] = set()
+
+    for index, node in enumerate(nodes):
+        label = f"nodes[{index}]"
+
+        if not isinstance(node, str):
+            errors.append(f"{label} must be a string.")
+            continue
+
+        if not NODE_PATTERN.fullmatch(node):
+            errors.append(f"{label} must contain uppercase letters only.")
+
+        if node in seen_nodes:
+            errors.append(f"{label}: duplicate node identifier {node!r}.")
+
+        seen_nodes.add(node)
+
+    return errors
+
+
+def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
+    """Validate the basic circuit fields and nodes."""
+
+    # Revisa el ID, el nombre, el tipo y los nodos, y devuelve los errores.
     # También deja is_valid y error_message listos para que otra parte del
     # programa pueda saber si hay problemas.
 
@@ -56,6 +99,11 @@ def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
         errors.append(
             "circuit_type must be 'series', 'parallel', or 'series-parallel'."
         )
+
+    # La validación de nodos vive aparte para que se pueda probar y entender
+    # sin mezclarla con los otros datos del circuito.
+
+    errors.extend(validate_nodes(current_circuit.get("nodes")))
 
     # Solo cambiamos estas dos claves; las demás partes del circuito todavía
     # se revisarán en los siguientes pasos.
