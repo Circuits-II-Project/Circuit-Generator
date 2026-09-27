@@ -54,7 +54,7 @@ def calculate_eqr_series(resistances):
     return equivalent_resistance
 
 #----------------------------------------------------------------------------------
-# INDUCTOR'S FORMULAS
+# INDUCTORS FORMULAS
 #----------------------------------------------------------------------------------
 
 # Function for calculating the voltage of an inductor. We need multiple values:
@@ -103,7 +103,7 @@ def calculate_eqi_series(inductances):
 
 # Function for calculating the power of an inductor. We use the following values:
 # - inductance = Inductor value in Henries
-# - previous_current = The starting currenty
+# - previous_current = The starting current
 # - intant_current = Instanteneous current in a given time
 # - previous_time = The starting time
 # - time = The final time
@@ -118,7 +118,77 @@ def calculate_inductor_power(inductance, previous_current, instant_current, prev
     # Apply the inductor voltage formula
     inductor_voltage = inductance * (inductor_current/inductor_time)
     
-    # Use the calculated voltage to obtain the instant power of an inductor 
-    inductor_power = inductor_voltage * instant_current
+    # Use the calculated current and voltage to obtain the inductor's power (p=vi)
+    inductor_power = inductor_voltage * inductor_current
     
     return inductor_power
+
+#----------------------------------------------------------------------------------
+# CAPACITORS FORMULAS
+#----------------------------------------------------------------------------------
+
+# Function for calculating the current of a capacitor. The values:
+# - Capacitance = Capacitor value in Farads
+# - previous_voltage = Initial voltage
+# - voltage = Final voltage
+# - previous_time = Starting time
+# - time = Final Time 
+def calcuate_capacitor_current(capacitance, previous_voltage, voltage, previous_time, time):
+    
+    # Calculate the voltage difference = final_voltage - starting_voltage
+    capacitor_voltage = voltage - previous_voltage 
+    
+    # Calculate the the time difference = final_time - starting_time
+    capacitor_time = time - previous_time
+    
+    # Calculate the capacitor current based on the voltage and time value
+    capacitor_current = capacitance * (capacitor_voltage/capacitor_time)
+    
+    return capacitor_current
+
+# Function for calculating the equivalent resistance of a capacitor. It is done as the inverse of a resistor
+# Capacitors in series are calculated like resistors in parallel
+def calculate_eqc_series(capacitances):
+    equivalent_capacitance = 0
+    
+    # Add the capacitor values in fractions
+    for capacitor in capacitances:
+        equivalent_capacitance += 1/capacitor
+    
+    # Raise the obtained value to the power of -1
+    equivalent_capacitance **= -1
+    
+    return equivalent_capacitance
+
+# Function for calculating the equivalnet resistance of a capacitor.
+# Capacitors in parallel are calculated like resistors in series.
+def calculate_eqc_parallel(capacitances):
+    equivalent_capacitance = 0
+    
+    # We can add the capacitor values directly
+    for capacitor in capacitances:
+        equivalent_capacitance += capacitor
+    
+    return equivalent_capacitance
+
+# Function for calculating the power of a capacitor. We use the following values:
+# - capacitance = Capacitor value in Farads
+# - previous_voltage = The starting voltage
+# - intant_voltage = Instanteneous voltage in a given time
+# - previous_time = The starting time
+# - time = The final time
+def calculate_capacitor_power(capacitance, previous_voltage, isntant_voltage, previous_time, time):
+
+    # Calculating voltage difference = final_voltage - initial_voltage
+    capacitor_voltage = isntant_voltage - previous_voltage
+    
+    # Calculating time difference = final_time - initial_time
+    capacitor_time = time - previous_time
+    
+    # Apply the capacitor's current formula
+    capacitor_current = capacitance * (capacitor_voltage/capacitor_time)
+    
+    # Use the calculated current and voltage to obtain the capacitor's power (p=vi)
+    capacitor_power = capacitor_voltage * capacitor_current
+    
+    return capacitor_power
