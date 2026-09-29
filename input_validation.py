@@ -11,6 +11,11 @@ from numbers import Real
 
 SUPPORTED_CIRCUIT_TYPES = {"series", "parallel", "series-parallel"}
 
+# Por ahora trabajamos con una sola fuente de voltaje, llamada V1.
+
+SOURCE_ID = "V1"
+SUPPORTED_SOURCE_TYPES = {"AC", "DC"}
+
 # Los nodos se escriben solo con letras mayúsculas, como A, B, AA o AB.
 
 NODE_PATTERN = re.compile(r"^[A-Z]+$")
@@ -69,10 +74,70 @@ def validate_nodes(nodes: object) -> list[str]:
     return errors
 
 
-def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
-    """Validate the basic circuit fields and nodes."""
+def validate_source(source: object, nodes: object) -> list[str]:
+    """Return errors found in the circuit voltage source."""
 
-    # Revisa el ID, el nombre, el tipo y los nodos, y devuelve los errores.
+    # La fuente se revisa aparte para que sus reglas no queden mezcladas con
+    # las reglas generales del circuito.
+
+    if not isinstance(source, dict):
+        return ["source must be a dictionary."]
+
+    errors: list[str] = []
+    source_id = source.get("source_id")
+
+    if source_id != SOURCE_ID:
+        errors.append("source_id must be 'V1'.")
+
+    # El nombre se usa en los errores para que sea más fácil saber qué dato falló.
+
+    label = source_id if isinstance(source_id, str) else "source"
+    source_type = source.get("source_type")
+
+    if source_type not in SUPPORTED_SOURCE_TYPES:
+        errors.append(f"{label}: source_type must be 'AC' or 'DC'.")
+
+    if not is_valid_number(source.get("source_voltage")):
+        errors.append(f"{label}: source_voltage must be a finite number.")
+
+    frequency = source.get("source_frequency")
+
+    # AC necesita una frecuencia positiva. En DC debe quedar como None.
+
+    if source_type == "AC":
+        if not is_valid_number(frequency):
+            errors.append(f"{label}: AC source_frequency must be a finite number.")
+        elif frequency <= 0:
+            errors.append(f"{label}: AC source_frequency must be greater than zero.")
+    elif source_type == "DC" and frequency is not None:
+        errors.append(f"{label}: DC source_frequency must be None.")
+
+    node_set: set[str] = (
+        {node for node in nodes if isinstance(node, str)}
+        if isinstance(nodes, list)
+        else set()
+    )
+    from_node = source.get("from_node")
+    to_node = source.get("to_node")
+
+    for field, node in (("from_node", from_node), ("to_node", to_node)):
+        if not isinstance(node, str):
+            errors.append(f"{label}: {field} must be a string.")
+        elif node not in node_set:
+            errors.append(f"{label}: {field} {node!r} is not in nodes.")
+
+    # Una fuente necesita dos terminales diferentes para tener una conexión útil.
+
+    if isinstance(from_node, str) and from_node == to_node:
+        errors.append(f"{label}: from_node and to_node must be different.")
+
+    return errors
+
+
+def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
+    """Validate the basic circuit fields, nodes, and voltage source."""
+
+    # Revisa el ID, el nombre, el tipo, los nodos y la fuente de voltaje.
     # También deja is_valid y error_message listos para que otra parte del
     # programa pueda saber si hay problemas.
 
@@ -105,8 +170,18 @@ def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
 
     errors.extend(validate_nodes(current_circuit.get("nodes")))
 
-    # Solo cambiamos estas dos claves; las demás partes del circuito todavía
-    # se revisarán en los siguientes pasos.
+    source = current_circuit.get("source")
+
+    # Una fuente vacía no cuenta como fuente presente.
+
+    current_circuit["has_source"] = isinstance(source, dict) and bool(source)
+
+    if not current_circuit["has_source"]:
+        errors.append("source is required.")
+    else:
+        errors.extend(validate_source(source, current_circuit.get("nodes")))
+
+    # Por ahora solo actualizamos las banderas que corresponden a esta etapa.
 
     is_valid = not errors
     current_circuit["is_valid"] = is_valid
