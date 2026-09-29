@@ -8,15 +8,16 @@ import unittest
 from input_validation import (
     is_valid_number,
     validate_circuit,
+    validate_components,
     validate_nodes,
     validate_source,
 )
 
 
 def valid_circuit() -> dict[str, object]:
-    """Return the smallest circuit that is valid through Step 3."""
+    """Return the smallest circuit that is valid through Step 4."""
 
-    # Crea el circuito más pequeño que debería pasar las validaciones hasta Step 3.
+    # Crea el circuito más pequeño que debería pasar las validaciones hasta Step 4.
 
     return {
         "circuit_id": "C001",
@@ -31,6 +32,17 @@ def valid_circuit() -> dict[str, object]:
             "from_node": "A",
             "to_node": "C",
         },
+        "components": [
+            {
+                "component_id": "R1",
+                "component_type": "resistor",
+                "component_value": 10.0,
+                "component_prefix": "k",
+                "component_unit": "ohm",
+                "from_node": "A",
+                "to_node": "B",
+            }
+        ],
     }
 
 
@@ -68,7 +80,7 @@ class BasicCircuitValidationTests(unittest.TestCase):
         self.assertTrue(circuit["is_valid"])
         self.assertEqual(circuit["error_message"], "")
         self.assertTrue(circuit["has_source"])
-        self.assertNotIn("has_components", circuit)
+        self.assertTrue(circuit["has_components"])
 
     def test_non_dictionary_circuit_is_invalid(self) -> None:
         # También revisamos que no falle de forma rara si llega una lista.
@@ -296,6 +308,134 @@ class SourceValidationTests(unittest.TestCase):
         errors = validate_source(None, ["A", "B"])
 
         self.assertEqual(errors, ["source must be a dictionary."])
+
+
+class ComponentValidationTests(unittest.TestCase):
+    # Prueba solamente las reglas de componentes agregadas en el Step 4.
+
+    def test_multiple_valid_components_are_accepted(self) -> None:
+        circuit = valid_circuit()
+        circuit["components"].extend([
+            {
+                "component_id": "C1",
+                "component_type": "capacitor",
+                "component_value": 2.0,
+                "component_prefix": "u",
+                "component_unit": "farad",
+                "from_node": "B",
+                "to_node": "C",
+            },
+            {
+                "component_id": "L1",
+                "component_type": "inductor",
+                "component_value": 3.0,
+                "component_prefix": "m",
+                "component_unit": "henry",
+                "from_node": "C",
+                "to_node": "A",
+            },
+        ])
+
+        self.assertTrue(validate_circuit(circuit)[0])
+        self.assertTrue(circuit["has_components"])
+
+    def test_component_presence_updates_has_components(self) -> None:
+        missing_components = object()
+        cases = (
+            (missing_components, "components must be a list"),
+            (None, "components must be a list"),
+            ({}, "components must be a list"),
+            ([], "at least one component"),
+        )
+
+        for components, text in cases:
+            with self.subTest(components=components):
+                circuit = valid_circuit()
+
+                if components is missing_components:
+                    circuit.pop("components")
+                else:
+                    circuit["components"] = components
+
+                self.assertFalse(validate_circuit(circuit)[0])
+                self.assertIn(text, circuit["error_message"])
+                self.assertFalse(circuit["has_components"])
+
+    def test_component_type_ids_and_duplicates(self) -> None:
+        cases = (
+            ({"component_type": "diode"}, "unsupported component_type"),
+            ({"component_id": "X1"}, "component_id"),
+            ({"component_id": "C1"}, "component_id"),
+        )
+
+        for changes, text in cases:
+            with self.subTest(changes=changes):
+                circuit = valid_circuit()
+                circuit["components"][0].update(changes)
+                self.assertFalse(validate_circuit(circuit)[0])
+                self.assertIn(text, circuit["error_message"])
+
+        circuit = valid_circuit()
+        circuit["components"].append(circuit["components"][0].copy())
+        self.assertFalse(validate_circuit(circuit)[0])
+        self.assertIn("duplicate component_id", circuit["error_message"])
+
+    def test_component_values_must_be_positive_finite_numbers(self) -> None:
+        component_data = {
+            "resistor": ("R1", "ohm"),
+            "capacitor": ("C1", "farad"),
+            "inductor": ("L1", "henry"),
+        }
+
+        for component_type, (component_id, unit) in component_data.items():
+            for value in (0, -1):
+                with self.subTest(component_type=component_type, value=value):
+                    circuit = valid_circuit()
+                    circuit["components"][0].update(
+                        component_id=component_id,
+                        component_type=component_type,
+                        component_unit=unit,
+                        component_value=value,
+                    )
+                    self.assertFalse(validate_circuit(circuit)[0])
+                    self.assertIn("greater than zero", circuit["error_message"])
+
+        for value in (math.nan, math.inf, -math.inf, True, "10"):
+            with self.subTest(value=value):
+                circuit = valid_circuit()
+                circuit["components"][0]["component_value"] = value
+                self.assertFalse(validate_circuit(circuit)[0])
+                self.assertIn("finite number", circuit["error_message"])
+
+    def test_prefix_unit_and_connections_are_checked(self) -> None:
+        cases = (
+            ({"component_prefix": "x"}, "component_prefix"),
+            ({"component_unit": "farad"}, "component_unit"),
+            ({"from_node": "Z"}, "not in nodes"),
+            ({"to_node": "Z"}, "not in nodes"),
+            ({"to_node": "A"}, "must be different"),
+        )
+
+        for changes, text in cases:
+            with self.subTest(changes=changes):
+                circuit = valid_circuit()
+                circuit["components"][0].update(changes)
+                self.assertFalse(validate_circuit(circuit)[0])
+                self.assertIn(text, circuit["error_message"])
+
+    def test_validate_components_rejects_non_list(self) -> None:
+        self.assertEqual(
+            validate_components(None, ["A", "B"]),
+            ["components must be a list."],
+        )
+
+    def test_component_item_must_be_a_dictionary(self) -> None:
+        circuit = valid_circuit()
+        circuit["components"] = ["R1"]
+        is_valid, errors = validate_circuit(circuit)
+
+        self.assertFalse(is_valid)
+        self.assertTrue(any("must be a dictionary" in error for error in errors))
 
 
 if __name__ == "__main__":

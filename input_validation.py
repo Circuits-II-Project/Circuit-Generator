@@ -16,6 +16,23 @@ SUPPORTED_CIRCUIT_TYPES = {"series", "parallel", "series-parallel"}
 SOURCE_ID = "V1"
 SUPPORTED_SOURCE_TYPES = {"AC", "DC"}
 
+# Estas tablas indican qué letra y unidad debe usar cada tipo de componente.
+
+COMPONENT_ID_PREFIXES = {
+    "resistor": "R",
+    "capacitor": "C",
+    "inductor": "L",
+}
+COMPONENT_UNITS = {
+    "resistor": "ohm",
+    "capacitor": "farad",
+    "inductor": "henry",
+}
+
+# El prefijo se guarda separado del valor para convertirlo más adelante.
+
+ENGINEERING_PREFIXES = {"", "p", "n", "u", "m", "k", "M", "G", "T"}
+
 # Los nodos se escriben solo con letras mayúsculas, como A, B, AA o AB.
 
 NODE_PATTERN = re.compile(r"^[A-Z]+$")
@@ -134,10 +151,100 @@ def validate_source(source: object, nodes: object) -> list[str]:
     return errors
 
 
-def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
-    """Validate the basic circuit fields, nodes, and voltage source."""
+def validate_components(components: object, nodes: object) -> list[str]:
+    """Return errors found in the circuit component list."""
 
-    # Revisa el ID, el nombre, el tipo, los nodos y la fuente de voltaje.
+    if not isinstance(components, list):
+        return ["components must be a list."]
+
+    if not components:
+        return ["components must contain at least one component."]
+
+    errors: list[str] = []
+    component_ids: set[str] = set()
+    node_set: set[str] = (
+        {node for node in nodes if isinstance(node, str)}
+        if isinstance(nodes, list)
+        else set()
+    )
+
+    for index, component in enumerate(components):
+        if not isinstance(component, dict):
+            errors.append(f"components[{index}] must be a dictionary.")
+            continue
+
+        component_id = component.get("component_id")
+        label = (
+            component_id
+            if isinstance(component_id, str)
+            else f"components[{index}]"
+        )
+        component_type = component.get("component_type")
+        expected_prefix = COMPONENT_ID_PREFIXES.get(component_type)
+
+        # El ID cambia según el tipo: R1 es resistor, C1 capacitor y L1 inductor.
+
+        if expected_prefix is None:
+            errors.append(f"{label}: unsupported component_type {component_type!r}.")
+        elif not isinstance(component_id, str) or not re.fullmatch(
+            rf"{expected_prefix}[1-9][0-9]*",
+            component_id,
+        ):
+            errors.append(
+                f"{label}: component_id must match {expected_prefix}<number>."
+            )
+
+        if isinstance(component_id, str):
+            if component_id in component_ids:
+                errors.append(f"{component_id}: duplicate component_id.")
+            component_ids.add(component_id)
+
+        value = component.get("component_value")
+
+        # Para este proyecto, los componentes pasivos deben tener valor positivo.
+
+        if not is_valid_number(value):
+            errors.append(f"{label}: component_value must be a finite number.")
+        elif value <= 0:
+            errors.append(f"{label}: component_value must be greater than zero.")
+
+        prefix = component.get("component_prefix")
+
+        if not isinstance(prefix, str) or prefix not in ENGINEERING_PREFIXES:
+            errors.append(
+                f"{label}: component_prefix must be a supported engineering prefix."
+            )
+
+        expected_unit = COMPONENT_UNITS.get(component_type)
+
+        if expected_unit is None:
+            errors.append(
+                f"{label}: component_unit cannot be checked without a valid type."
+            )
+        elif component.get("component_unit") != expected_unit:
+            errors.append(f"{label}: component_unit must be {expected_unit!r}.")
+
+        from_node = component.get("from_node")
+        to_node = component.get("to_node")
+
+        for field, node in (("from_node", from_node), ("to_node", to_node)):
+            if not isinstance(node, str):
+                errors.append(f"{label}: {field} must be a string.")
+            elif node not in node_set:
+                errors.append(f"{label}: {field} {node!r} is not in nodes.")
+
+        # Un componente necesita dos nodos distintos para quedar conectado.
+
+        if isinstance(from_node, str) and from_node == to_node:
+            errors.append(f"{label}: from_node and to_node must be different.")
+
+    return errors
+
+
+def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
+    """Validate basic fields, nodes, the voltage source, and components."""
+
+    # Revisa el ID, el nombre, el tipo, los nodos, la fuente y los componentes.
     # También deja is_valid y error_message listos para que otra parte del
     # programa pueda saber si hay problemas.
 
@@ -181,7 +288,17 @@ def validate_circuit(current_circuit: object) -> tuple[bool, list[str]]:
     else:
         errors.extend(validate_source(source, current_circuit.get("nodes")))
 
-    # Por ahora solo actualizamos las banderas que corresponden a esta etapa.
+    components = current_circuit.get("components")
+
+    # Una lista vacía tampoco cuenta como tener componentes.
+
+    current_circuit["has_components"] = (
+        isinstance(components, list) and bool(components)
+    )
+
+    # validate_components ya revisa si falta la lista o si está vacía.
+
+    errors.extend(validate_components(components, current_circuit.get("nodes")))
 
     is_valid = not errors
     current_circuit["is_valid"] = is_valid
