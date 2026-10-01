@@ -21,8 +21,6 @@ def pol_to_rec(magnitude,angle_degrees): #polar to rectangular representation
     z = cmath.rect(magnitude,angle_radians)
     return z.real, z.imag   
 
-
-
 def calc_impedance(XC,XL,resistor):
     angle_degrees = math.degrees(math.atan((XL - XC)/(resistor)))
     Z = math.sqrt(pow(XL - XC,2) + pow(resistor,2))
@@ -43,7 +41,6 @@ C1 = 0.000001
 L1 = 4
 R1 = 30
 frequency = 50
-AC_voltage = 120
 
 #Lets find the inductive reactance
 XL = calc_inductive_reactance(L1,frequency)
