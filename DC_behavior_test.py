@@ -119,7 +119,7 @@ def calculate_inductor_power(inductance, previous_current, instant_current, prev
     inductor_voltage = inductance * (inductor_current/inductor_time)
     
     # Use the calculated current and voltage to obtain the inductor's power (p=vi)
-    inductor_power = inductor_voltage * inductor_current
+    inductor_power = inductor_voltage * instant_current
     
     return inductor_power
 
@@ -133,7 +133,7 @@ def calculate_inductor_power(inductance, previous_current, instant_current, prev
 # - voltage = Final voltage
 # - previous_time = Starting time
 # - time = Final Time 
-def calcuate_capacitor_current(capacitance, previous_voltage, voltage, previous_time, time):
+def calculate_capacitor_current(capacitance, previous_voltage, voltage, previous_time, time):
     
     # Calculate the voltage difference = final_voltage - starting_voltage
     capacitor_voltage = voltage - previous_voltage 
@@ -189,6 +189,123 @@ def calculate_capacitor_power(capacitance, previous_voltage, isntant_voltage, pr
     capacitor_current = capacitance * (capacitor_voltage/capacitor_time)
     
     # Use the calculated current and voltage to obtain the capacitor's power (p=vi)
-    capacitor_power = capacitor_voltage * capacitor_current
+    capacitor_power = isntant_voltage * capacitor_current
     
     return capacitor_power
+
+#-----------------------------------------------------------------------------------------------------
+# RESISTOR TEST
+#-----------------------------------------------------------------------------------------------------
+#Test for the resistor voltage formula
+Resistor_voltage = calculate_resistor_voltage(0.005, 100)
+print("Current: 0.005A | Resistance: 100 Ohms")
+print(f"Resistor Voltage: {Resistor_voltage}V")
+print()
+
+#Test for the resistor current formula
+Resistor_current = calculate_resistor_current(0.5, 100)
+print("Voltage: 0.5V | Resistance: 100 Ohms")
+print(f"Resistor Current: {Resistor_current}A")
+print()
+
+#Test for the resistor power formula
+Resistor_power = calculate_resistor_power(0.005, 0.5)
+print("Voltage: 0.5V | Current: 0.005A")
+print(f"Resistor Power: {Resistor_current}W")
+print()
+
+#Test for the equivalent resistance of parallel resistors
+Resistors_parallel = [100, 50, 100, 15]
+Equivalent_parallel_resistance = calculate_eqr_parallel(Resistors_parallel)
+print("R1 = 100 ohms | R2 = 50 ohms | R3 = 100 ohms | R4 = 15 ohms")
+print(f"Equivalent Resistance: {Equivalent_parallel_resistance} Ohms")
+print()
+
+#Test for the equivalent resistance of series resistors
+Resistors_series = [100, 50, 100, 15]
+Equivalent_series_resistance = calculate_eqr_series(Resistors_series)
+print("R1 = 100 ohms | R2 = 50 ohms | R3 = 100 ohms | R4 = 15 ohms")
+print(f"Equivalent Resistance: {Equivalent_series_resistance} Ohms")
+print()
+
+#-----------------------------------------------------------------------------------------------------
+# INDUCTOR TEST
+#-----------------------------------------------------------------------------------------------------
+
+#Test for the voltage in an inductor
+inductance = 0.015
+start_current = 0.005
+final_current = 0.1
+start_time = 0 #Would be constant 
+final_time = 1
+Inductor_voltage = calculate_inductor_voltage(inductance, start_current, final_current, start_time, final_time)
+print("Inductance = 15mH | Starting Current = 5mA | Final Current = 4mA | Start time = 10ms | Final Time = 1s")
+print(f"Inductor Voltage: {Inductor_voltage} V")
+print()
+
+#Test for the equivalent inductance of parallel inductors
+Inductors_parallel = [0.015, 0.05, 0.01, 0.001]
+Equivalent_parallel_inductance = calculate_eqi_parallel(Inductors_parallel)
+print("R1 = 15mH | R2 = 50 mH | R3 = 10mH | R4 = 1mH")
+print(f"Equivalent Inductance: {Equivalent_parallel_inductance} H")
+print()
+
+#Test for the equivalent inductance of series inductors
+Inductors_series = [0.015, 0.05, 0.01, 0.001]
+Equivalent_series_inductance = calculate_eqi_series(Inductors_series)
+print("R1 = 15mH | R2 = 50 mH | R3 = 10mH | R4 = 1mH")
+print(f"Equivalent Inductance: {Equivalent_series_inductance} H")
+print()
+
+#Test for the power in an inductor
+inductance = 0.015
+start_current = 0.005
+final_current = 0.1
+start_time = 0 #Would be constant 
+final_time = 1
+Inductor_power = calculate_inductor_power(inductance, start_current, final_current, start_time, final_time)
+print("Inductance = 15mH | Starting Current = 5mA | Final Current = 4mA | Start time = 0s | Final Time = 1s")
+print(f"Inductor Power: {Inductor_voltage} W")
+print()
+
+#-----------------------------------------------------------------------------------------------------
+# CAPACITOR TEST
+#-----------------------------------------------------------------------------------------------------
+
+#Test for the current in a capacitor
+capacitance = 0.015
+start_voltage = 15
+final_voltage = 20
+start_time = 0 #Would be constant 
+final_time = 1
+Capacitor_current = calculate_capacitor_current(capacitance, start_voltage, final_voltage, start_time, final_time)
+print("capacitance = 15mF | Starting Voltage = 15V | Final Voltage = 20V | Start time = 0s | Final Time = 1s")
+print(f"Capacitor Current: {Capacitor_current} A")
+print()
+
+#Test for the equivalent capacitance of series capacitors
+Capacitors_series = [15, 5, 1, 10]
+Equivalent_series_capacitance = calculate_eqc_series(Capacitors_series)
+print("R1 = 15F | R2 = 5F | R3 = 1F | R4 = 10F")
+print(f"Equivalent Capacitance: {Equivalent_series_capacitance} F")
+print()
+
+
+#Test for the equivalent capacitance of parallel capacitors
+Capacitors_parallel = [15, 5, 1, 10]
+Equivalent_parallel_capacitance = calculate_eqc_parallel(Capacitors_parallel)
+print("R1 = 15F | R2 = 5F | R3 = 1F | R4 = 10F")
+print(f"Equivalent Capacitance: {Equivalent_parallel_capacitance} F")
+print()
+
+#Test for the power in a capacitor
+
+capacitance = 0.015
+start_voltage = 15
+final_voltage = 20
+start_time = 0 #Would be constant 
+final_time = 1
+Capacitor_power = calculate_capacitor_power(capacitance, start_voltage, final_voltage, start_time, final_time)
+print("capacitance = 15mF | Starting Voltage = 15V | Final Voltage = 20V | Start time = 0s | Final Time = 1s")
+print(f"Capacitor Power: {Capacitor_power} W")
+print()
