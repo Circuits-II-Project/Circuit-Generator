@@ -1,8 +1,6 @@
 import os
 import cmath #for complex number operations
 import math
-# Wipes the terminal screen completely clean before printing anything else
-os.system('cls' if os.name == 'nt' else 'clear')
 
 #AC circuit elements have 3 representations: sinusoidal, rectangular and polar
 #the following script will only focus on rectangular and polar for now
@@ -36,31 +34,30 @@ def calc_inductive_reactance(inductance,source_frequency):
     return XL
 
 
-#------------TEST--------------
-C1 = 0.000001
-L1 = 4
-R1 = 30
-frequency = 50
+if __name__ == "__main__":
+    # Las demostraciones quedan aquí para que importar las fórmulas no las ejecute.
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-#Lets find the inductive reactance
-XL = calc_inductive_reactance(L1,frequency)
-print(XL)
-#Lets find the capacitive reactance
-XC = calc_capacitive_reactance(C1,frequency)
-print(XC)
+    #------------TEST--------------
+    C1 = 0.000001
+    L1 = 4
+    R1 = 30
+    frequency = 50
 
-#Let's calculate the impedance
-Z = calc_impedance(XC,XL,R1)
-print(Z)
+    #Lets find the inductive reactance
+    XL = calc_inductive_reactance(L1,frequency)
+    print(XL)
+    #Lets find the capacitive reactance
+    XC = calc_capacitive_reactance(C1,frequency)
+    print(XC)
 
-magnitude, angle = Z
+    #Let's calculate the impedance
+    Z = calc_impedance(XC,XL,R1)
+    print(Z)
 
-real, imaginary = pol_to_rec(magnitude, angle)
+    magnitude, angle = Z
 
-print("Polar:", magnitude, angle)
-print("Rectangular:", real, imaginary)
+    real, imaginary = pol_to_rec(magnitude, angle)
 
-
-
-
-
+    print("Polar:", magnitude, angle)
+    print("Rectangular:", real, imaginary)
