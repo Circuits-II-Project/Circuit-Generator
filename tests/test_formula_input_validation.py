@@ -39,10 +39,13 @@ class FormulaInputValidationTests(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertIsNone(parse_positive_list(value))
 
-    def test_positive_list_rejects_zero(self) -> None:
-        self.assertIsNone(parse_positive_list("1, 0, 3"))
+    def test_positive_list_rejects_zero_and_negative_values(self) -> None:
+        for value in ("1, 0, 3", "1, -2, 3"):
+            with self.subTest(value=value):
+                self.assertIsNone(parse_positive_list(value))
 
-    def test_magnitude_zero_and_negative_angle_are_allowed(self) -> None:
+    def test_non_negative_and_signed_rules_handle_boundary_values(self) -> None:
+        self.assertFalse(number_matches_rule(-1.0, "non_negative"))
         self.assertTrue(number_matches_rule(0.0, "non_negative"))
         self.assertTrue(number_matches_rule(-90.0, "signed"))
 
@@ -52,6 +55,7 @@ class FormulaInputValidationTests(unittest.TestCase):
     def test_time_must_be_greater_than_previous_time(self) -> None:
         self.assertTrue(has_valid_time_interval(1.0, 1.5))
         self.assertFalse(has_valid_time_interval(1.0, 1.0))
+        self.assertFalse(has_valid_time_interval(1.0, 0.5))
 
 
 if __name__ == "__main__":
