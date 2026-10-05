@@ -36,29 +36,6 @@ def calc_inductive_reactance(inductance,source_frequency):
     return XL
 
 
-#------------TEST--------------
-C1 = 0.000001
-L1 = 4
-R1 = 30
-frequency = 50
-
-#Lets find the inductive reactance
-XL = calc_inductive_reactance(L1,frequency)
-print(XL)
-#Lets find the capacitive reactance
-XC = calc_capacitive_reactance(C1,frequency)
-print(XC)
-
-#Let's calculate the impedance
-Z = calc_impedance(XC,XL,R1)
-print(Z)
-
-magnitude, angle = Z
-
-real, imaginary = pol_to_rec(magnitude, angle)
-
-print("Polar:", magnitude, angle)
-print("Rectangular:", real, imaginary)
 
 
 
