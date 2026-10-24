@@ -37,6 +37,34 @@
 - I will use a generated JSON file for testing and as a guide for the program, ensuring that the program does not depend on the JSON file directly.
 - I will make use of a class for controlling the node information
 
-### Classes
-- Nodes
-  - There will be a class created each time that a node is analyzed, each with its own information about the votlage, current, component, and id
+## Classes
+
+### Nodes
+- There will be a class created each time that a node is analyzed, each with its own information about the votlage, current, component, and id
+- Currently, we have 5 classes:
+  - resistor
+  - source
+  - component_loader
+  - node
+  - component_manager
+- The information that is saved about each component is saved between these classes.
+- The classes are correctly structured for adding mroe components without causing issues (inductors and capacitors).
+  
+*resistor Class*
+- It will hold the functions for calculating any related value of voltage or current with the resistor
+- It will inheriate from the component_manager Class to store information as well
+
+*node Class*
+- It will keep track of the components on the circuit, primarely the nodes that are connected to those saved
+  components
+
+*source Class*
+- Similary to the resistor Class, but with the information of the voltage source of the circuit. It will also inheriate
+  from the component_manager Class.
+
+*component_loader Class*
+- The main control of all the classes. Here we extract the information from the JSON file and create the class objects of each component in the
+  circuit and the node Class objects for identifying the position of each component.
+
+*component_manager Class*
+- Superclass from which the ressitor and node Class inheriate variables, since there is a direct connection and similar values between the components
