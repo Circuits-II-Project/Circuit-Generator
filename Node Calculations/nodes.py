@@ -3,36 +3,6 @@ import os
 # Wipes the terminal screen completely clean before printing anything else
 os.system('cls' if os.name == 'nt' else 'clear')
 
-#Step 1: Read the information from the JSON file
-# Storage -> Node -> Component
-
-class component_manager:
-    def __init__(self, id, type, from_node, to_node):
-        self.id = id
-        self.type = type
-        self.from_node = from_node
-        self.to_node = to_node
-
-
-class node:
-    def __init__(self, id, voltage):
-        self.id = id
-        self.voltage_at_node = voltage
-        self.connected_components = []
-
-class resistor(component_manager):
-    def __init__(self, id, type, from_node, to_node, resistance):
-        super().__init__(id, type, from_node, to_node)
-
-        self.resistance = resistance
-        
-class source(component_manager):
-    def __init__(self, id, type, from_node, to_node, voltage, frequency):
-        super().__init__(id, type, from_node, to_node)
-    
-        self.frequency = frequency
-        self.voltage = voltage
-        
 class components_loader:
     def __init__(self, id):
         self.component_id = id
@@ -61,6 +31,7 @@ class components_loader:
                 )
                 self.components[resistor_obj.id] = resistor_obj
                 self.add_component_node(resistor_obj.from_node, resistor_obj)
+                self.add_component_node(resistor_obj.to_node, resistor_obj)
         
     def format_source(self):
         
@@ -74,7 +45,7 @@ class components_loader:
         )
         self.components[source_obj.id] = source_obj
         self.add_component_node(source_obj.from_node, source_obj)
-        
+        self.add_component_node(source_obj.to_node, source_obj)
         
         
     def add_component_node(self, node_id, component):
@@ -84,11 +55,47 @@ class components_loader:
         
         self.nodes[node_id].connected_components.append(component)
 
+# Class for storing the general information of the subclasses. This class acts as a Parent or Superclass, which does not need to be instantiated.
+class component_manager:
+    def __init__(self, id, type, from_node, to_node):
+        self.id = id
+        self.type = type
+        self.from_node = from_node
+        self.to_node = to_node
+
+# This Class will store the components at each node with their `from` and `to` node connections.
+class node:
+    def __init__(self, id, voltage):
+        self.id = id
+        self.voltage_at_node = voltage
+        self.connected_components = []
+        
+    def __repr__(self):
+        # Creates a clean text summary showing the node ID, voltage, and connected component IDs
+        comp_ids = [c.id for c in self.connected_components]
+        return f"Node(ID: {self.id}, Voltage: {self.voltage_at_node}V, Connected: {comp_ids})"
+    
+# This class will store are formulas and information related to a resistor component.
+class resistor(component_manager):
+    def __init__(self, id, type, from_node, to_node, resistance):
+        super().__init__(id, type, from_node, to_node)
+
+        self.resistance = resistance
+
+# This Class will store the information of the voltage source.
+class source(component_manager):
+    def __init__(self, id, type, from_node, to_node, voltage, frequency):
+        super().__init__(id, type, from_node, to_node)
+    
+        self.frequency = frequency
+        self.voltage = voltage
+        
+
 if __name__ == "__main__":
     s = components_loader("R2")
-    o = s.components.items()
-    for comp, obj in s.components.items():
-        print(obj.to_node)
+    o = s.nodes.items()
+    for node in s.nodes.values():
+        print(node)
     # print("--- SAVED COMPONENTS ---")
     # for comp_id, obj in s.components.items():
     #     print(f"Component ID : {obj.id}")

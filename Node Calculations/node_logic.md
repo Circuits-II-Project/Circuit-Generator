@@ -55,8 +55,9 @@
 - It will inheriate from the component_manager Class to store information as well
 
 *node Class*
-- It will keep track of the components on the circuit, primarely the nodes that are connected to those saved
-  components
+- It will keep track of the components on the circuit, primarely the nodes that are connected to the saved components. It will save the `from` and `to` 
+  nodes of each component, each one correctly identified to their respective component.
+  
 
 *source Class*
 - Similary to the resistor Class, but with the information of the voltage source of the circuit. It will also inheriate
