@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from formula_input_test import calculate_formula
+from formula_service import calculate_formula
 
 
 # Cada caso comprueba que la opción llegue a la fórmula correcta y use su resultado.

@@ -1,6 +1,6 @@
 import unittest
 
-from formula_input_test import (
+from formula_service import (
     has_valid_time_interval,
     number_matches_rule,
     parse_finite_number,
