@@ -69,3 +69,32 @@
 
 *component_manager Class*
 - Superclass from which the ressitor and node Class inheriate variables, since there is a direct connection and similar values between the components
+
+## Before Calculations
+- We need to ensure that the circuit is completed before calculating the data.
+- We need to ensure that:
+  1. There is at least 1 voltage source
+  2. A complete loop with no components hanging out
+  3. A reference node (Ground)
+- We also can check that, if two resistors have the same nodes, they are in parallel, but if they have different ones, they are in series. For ensuring consistency, we check how many resistors are in a single node. If there are more than 2, then what can we do?
+- We can do this by checks.
+  1. Check the amount of components at each node
+  2. Check the components that have equivalent nodes
+- We can take component A, list its nodes and then do the same with component B and see which are common. If both are, then they are in parallel. If only 1, they are in seires. If neither, then those 
+  components are not connected to each other. If parallel, the node could still have more than 2 components, but they can be in parallel as well. If series, the node has to be sharing exactly two components.
+
+- We have to follow a certain restriction for determining parallel or series. We will identify the amount of components in a node as `C`:
+
+1. Parallel
+    - C == 2
+    - a Node can have > 2 Components and have components in parallel BUT these components must have the same two nodes
+2. Series
+    - C == 1
+    - A node can have == 2 components in the same node, BUT it cannot surpass that limit or be below it 
+3. No connection
+    - C == 0
+
+- To establish a logic to follow:
+  1. Make a dictionary for the nodes that are shared between components
+  2. Label each component `series` or `parallel` and to what other component
+  3. Calculate after giving a label to each component
