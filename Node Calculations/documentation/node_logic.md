@@ -104,3 +104,5 @@
 
 - For ensuring series behavior, we check that a node has only two components connected to it. If its true, then those two components are in series.
 - For parallel, we must compare the components between all the nodes. Then, we check which components have the same nodes. Those components will be in parallel.
+
+- ENSURE THAT THE NODES ARE NOT CHECKED TWICE, ONLY ONCE (FIX)

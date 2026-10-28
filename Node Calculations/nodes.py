@@ -80,9 +80,7 @@ class node:
     def component_node_amount(self):
         print(len(self.connected_components))
 
-
-
-# This class will store are formulas and information related to a resistor component.
+# This class will store all formulas and information related to a resistor component.
 class resistor(component_manager):
     def __init__(self, id, type, from_node, to_node, resistance, tag):
         super().__init__(id, type, from_node, to_node, tag)
@@ -96,9 +94,6 @@ class source(component_manager):
     
         self.frequency = frequency
         self.voltage = voltage
-
-
-
 
 # Analyze the connections between nodes for determining series or parallel
 class connection_analyzer:
@@ -144,7 +139,7 @@ class connection_analyzer:
                 if c2 not in c1.tag["series"]:
                     c2.tag["series"].append(c1)
                     
-                #print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
+                print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
                 
     
     def tag_parallel(self):
@@ -170,36 +165,13 @@ class connection_analyzer:
                             parallel_comp = [other for other in overlap if other != item] 
                             item.tag["parallel"] = parallel_comp
                             
-                            #print(item.tag)
+                            print(item.tag)
                         # comp.tag["parallel"] = overlap
        
 # Here we can use it to output values for checking (for the future)
 class testing:
     pass
     
-    
-    # def calculate_eqr_parallel(self, resistances):
-    #     equivalent_resistance = 0
-        
-    #     # Add the resistors in fractions
-    #     for resistor in resistances:
-    #         equivalent_resistance += 1/resistor
-        
-    #     # Elevate the obtained resistance to the power of -1
-    #     equivalent_resistance **= -1
-    
-    #     return equivalent_resistance
-
-    # # Calculate the equivalent resistance of a series circouit
-    # def calculate_eqr_series(self, resistances):
-    #     equivalent_resistance = 0
-        
-    #     # Add the resistor values directly in a for loop
-    #     for resistor in resistances:
-    #         equivalent_resistance += resistor
-        
-    #     return equivalent_resistance
-
 if __name__ == "__main__":
     load = components_loader()
     analyze = connection_analyzer(load)
