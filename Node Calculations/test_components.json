@@ -1,0 +1,49 @@
+{
+    "circuit_id": "C001",
+    "circuit_name": "Circuit 1",
+    "circuit_type": "series",
+    
+    "source": 
+    {
+        "source_id": "V1",
+        "source_type": "DC",
+        "source_voltage": 12.0,
+        "source_frequency": null,
+        "from_node": "A",
+        "to_node": "C"
+    },
+    
+    "nodes": ["A", "B", "C"],
+    
+    "components": [
+    {
+      "component_id": "R1",
+      "component_type": "resistor",
+      "from_node": "A",
+      "to_node": "B",
+      "resistance": 100.0,
+      "tag": "A"
+    },
+    {
+      "component_id": "R2",
+      "component_type": "resistor",
+      "from_node": "A",
+      "to_node": "B",
+      "resistance": 200.0
+    },
+    {
+      "component_id": "R3",
+      "component_type": "resistor",
+      "from_node": "A",
+      "to_node": "B",
+      "resistance": 300.0
+    },
+    {
+      "component_id": "R4",
+      "component_type": "resistor",
+      "from_node": "B",
+      "to_node": "C",
+      "resistance": 300.0
+    }
+  ]
+}
