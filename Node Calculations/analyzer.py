@@ -42,7 +42,7 @@ class connection_analyzer:
                 if c2 not in c1.tag["series"]:
                     c2.tag["series"].append(c1)
                     
-                print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
+                #print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
                 
     
     def tag_parallel(self):
@@ -68,6 +68,6 @@ class connection_analyzer:
                             parallel_comp = [other for other in overlap if other != item] 
                             item.tag["parallel"] = parallel_comp
                             
-                            print(item.tag)
+                            #print(item.tag)
                         # comp.tag["parallel"] = overlap
   

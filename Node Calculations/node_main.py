@@ -8,8 +8,18 @@ if __name__ == "__main__":
     load = cl.components_loader()
     analyze = al.connection_analyzer(load)
     
+   # components = analyze.node_components
+    #print(components)
+    
+    for id, component in load.components.items():
+        print(id, component.tag)
 
-    
-    
+        for key, connection in component.tag.items():
+            print(connection)
+            
+            for other in connection:
+                print(other.id)
+                pass
+                #print(f"ID: {id} | Component in series: {other.id} & Component in parallel: {other.id}")
     
     
