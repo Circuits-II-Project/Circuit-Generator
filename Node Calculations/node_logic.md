@@ -98,3 +98,9 @@
   1. Make a dictionary for the nodes that are shared between components
   2. Label each component `series` or `parallel` and to what other component
   3. Calculate after giving a label to each component
+
+- Current progress focuses on creating a temporary list for the components of each node, assign each node as a key and list of components as the value, and then check them to see which nodes have the same components to determine series or parallel.
+- Also, the classes for the sources and components in general will have a `tag` for storing a dictionary with a list for the components that are in `series` and another for `parallel`.
+
+- For ensuring series behavior, we check that a node has only two components connected to it. If its true, then those two components are in series.
+- For parallel, we must compare the components between all the nodes. Then, we check which components have the same nodes. Those components will be in parallel.
