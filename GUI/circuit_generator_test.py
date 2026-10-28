@@ -37,9 +37,30 @@ def draw2():
         elm.Line().down(d.unit*.8)
         elm.CurrentLabel(top=False, ofst=.3).at(L1).label('$i_g$')
 
+def add_resistor():
+    with schemdraw.Drawing(file = 'MyCirc_2.png', show = False) as d:
+            elm.Resistor() 
+def add_capacitor():
+    with schemdraw.Drawing(file = 'MyCirc_2.png', show = False) as d:
+            elm.Capacitor() 
+def add_inductor():
+    with schemdraw.Drawing(file = 'MyCirc_2.png', show = False) as d:
+            elm.Inductor() 
 
 if __name__ == '__main__':
-    draw1()
-    draw2()
+    #draw1()
+    #draw2()
+
+    ask1 = input("Type what you would like to add to your circuit:").lower()
+    if ask1 == 'r':
+        with schemdraw.Drawing(file = 'MyCirc_2.png', show = False) as d:
+            elm.Resistor() 
+    elif ask1 == 'i':
+        with schemdraw.Drawing(file = 'MyCirc_2.png', show = False) as d:
+            elm.Inductor()     
+    else: 
+        print("okay bye!")
+
+
     # Keep both figure windows open until closed
     plt.show()
