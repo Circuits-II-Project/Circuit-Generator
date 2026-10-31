@@ -33,6 +33,31 @@ class FormulaStorageTests(unittest.TestCase):
             diagram_path,
         )
 
+    def valid_record(self) -> dict[str, object]:
+        return {
+            "formula_option": "1",
+            "formula_name": FORMULAS["1"][0],
+            "inputs": {"current": 1.0, "resistance": 2.0},
+            "results": {"resistor_voltage": 2.0},
+            "diagram_path": None,
+        }
+
+    def assert_persisted_record_is_rejected(
+        self,
+        record: dict[str, object],
+        error_type: type[Exception],
+    ) -> None:
+        document = {"schema_version": 1, "calculations": [record]}
+        self.storage_path.write_text(json.dumps(document), encoding="utf-8")
+        before = self.storage_path.read_bytes()
+
+        with self.assertRaises(error_type):
+            load_calculations(self.storage_path)
+        with self.assertRaises(error_type):
+            self.append_service_calculation("1", {"current": 1.0, "resistance": 2.0})
+
+        self.assertEqual(self.storage_path.read_bytes(), before)
+
     def test_missing_and_empty_files_read_as_empty_without_writing(self) -> None:
         self.assertEqual(load_calculations(self.storage_path), [])
         self.assertFalse(self.storage_path.exists())
@@ -108,6 +133,55 @@ class FormulaStorageTests(unittest.TestCase):
                         results,
                     )
                 self.assertEqual(self.storage_path.read_bytes(), before)
+
+    def test_rejects_non_finite_values_in_persisted_inputs_or_results(self) -> None:
+        locations = ("inputs", "results")
+        values = (math.nan, math.inf, -math.inf)
+
+        for location in locations:
+            for value in values:
+                with self.subTest(location=location, value=value):
+                    record = self.valid_record()
+                    record[location] = {"value": value}
+                    self.assert_persisted_record_is_rejected(record, ValueError)
+
+    def test_rejects_persisted_records_missing_required_fields(self) -> None:
+        for field in (
+            "formula_option",
+            "formula_name",
+            "inputs",
+            "results",
+            "diagram_path",
+        ):
+            with self.subTest(field=field):
+                record = self.valid_record()
+                record.pop(field)
+                self.assert_persisted_record_is_rejected(record, StorageFormatError)
+
+    def test_rejects_incorrect_persisted_record_field_types(self) -> None:
+        invalid_fields = {
+            "formula_option": 1,
+            "formula_name": None,
+            "inputs": [],
+            "results": [],
+            "diagram_path": 1,
+        }
+        for field, value in invalid_fields.items():
+            with self.subTest(field=field):
+                record = self.valid_record()
+                record[field] = value
+                self.assert_persisted_record_is_rejected(record, StorageFormatError)
+
+    def test_rejects_absolute_persisted_diagram_paths(self) -> None:
+        absolute_paths = (
+            r"C:\diagrams\circuit.png",
+            r"\\server\share\circuit.png",
+        )
+        for diagram_path in absolute_paths:
+            with self.subTest(diagram_path=diagram_path):
+                record = self.valid_record()
+                record["diagram_path"] = diagram_path
+                self.assert_persisted_record_is_rejected(record, StorageFormatError)
 
     def test_failed_atomic_replacement_preserves_records_and_cleans_temporary_file(
         self,
