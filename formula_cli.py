@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from formula_service import (
     FORMULAS,
     Formula,
@@ -11,6 +13,7 @@ from formula_service import (
     parse_finite_number,
     parse_positive_list,
 )
+from formula_storage import StorageFormatError, append_calculation
 
 
 def show_formula_menu() -> None:
@@ -83,8 +86,33 @@ def show_calculation_results(results: dict[str, float]) -> None:
         print(f"{name}: {value}")
 
 
-def main() -> None:
-    """Run the menu, collect validated values, and show its calculation result."""
+def should_save_calculation() -> bool:
+    """Ask whether to save a completed calculation.
+
+    Returns:
+        True only when the user explicitly accepts with ``s``. EOF is treated
+        as declining so existing piped terminal commands still finish normally.
+    """
+    while True:
+        try:
+            response = input("\n¿Deseas guardar este cálculo? (s/n): ").strip().lower()
+        except EOFError:
+            # Older non-interactive commands end after formula inputs.
+            return False
+
+        if response == "s":
+            return True
+        if response == "n":
+            return False
+        print("Responde con s para guardar o n para no guardar.")
+
+
+def main(storage_path: str | Path = "storage.json") -> None:
+    """Run one formula calculation and optionally save its completed result.
+
+    Args:
+        storage_path: JSON destination used only after the user accepts saving.
+    """
     show_formula_menu()
     option, formula = choose_formula()
     values = collect_formula_values(formula)
@@ -95,3 +123,22 @@ def main() -> None:
         print(f"Error de cálculo: {error}")
         return
     show_calculation_results(results)
+
+    if not should_save_calculation():
+        return
+
+    formula_name, _ = formula
+    try:
+        append_calculation(
+            storage_path,
+            option,
+            formula_name,
+            values,
+            results,
+            diagram_path=None,
+        )
+    except (OSError, StorageFormatError, TypeError, ValueError) as error:
+        print(f"No se pudo guardar el cálculo: {error}")
+        return
+
+    print("Cálculo guardado correctamente.")
