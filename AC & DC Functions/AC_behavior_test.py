@@ -1,8 +1,6 @@
 import os
 import cmath #for complex number operations
 import math
-# Wipes the terminal screen completely clean before printing anything else
-os.system('cls' if os.name == 'nt' else 'clear')
 
 #AC circuit elements have 3 representations: sinusoidal, rectangular and polar
 #the following script will only focus on rectangular and polar for now
@@ -36,8 +34,5 @@ def calc_inductive_reactance(inductance,source_frequency):
     return XL
 
 
-
-
-
-
-
+if __name__ == "__main__":
+    os.system('cls' if os.name == 'nt' else 'clear')

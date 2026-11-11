@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Test Display for "live" Images</title>
+    
+</head>
+
+<body>
+    <h1>
+        "live" image updating
+    </h1>
+        <img id="circuit" src="MyCirc_2.png" alt="No circuit yet - click a button">
+
+    <button onclick="add_resistor()" style="border-radius: 5px;">Resistor</button>
+    <button onclick="add_capacitor()" style="border-radius: 5px;">Capacitor</button>
+    <button onclick="add_inductor()" style="border-radius: 5px;">Inductor</button>
+
+    <script>
+        async function addPart(route){
+            //Tells python to run the function 
+            await fetch(route, {method: 'POST'});
+            //reload the image; the ?t= stops the browser from showing the old cached copy
+            document.getElementById('circuit').src = 'MyCirc_2.png?t=' + Date.now();
+        }
+        function add_resistor() {addPart('/add_resistor'); }
+        function add_capacitor() {addPart('/add_capacitor'); }
+        function add_inductor() {addPart('/add_inductor'); }
+
+    </script>
+
+</body>
+
+</html>
