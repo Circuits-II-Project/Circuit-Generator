@@ -1,13 +1,19 @@
-import os
+import os, sys
 import matplotlib
 matplotlib.use('Agg')
 import schemdraw
 import schemdraw.elements as elm
 from flask import Flask, send_from_directory
 
+# The path must be added BEFORE importing loader/analyzer, otherwise Python can't find them
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(HERE, '..','Node Calculations'))
+import loader as cl
+import analyzer as al
+
+
 schemdraw.use('matplotlib')
 
-HERE = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 
 #Every element added so far, so the circuit can grow with each click

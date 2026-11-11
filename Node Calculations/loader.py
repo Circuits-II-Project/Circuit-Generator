@@ -1,20 +1,22 @@
 import json 
 import components as cmps
 
-# Central class in which we call and create each component and node object and place the extracted JSON information into them.
+# Reads a circuit JSON file and returns its contents as a dict (outside the class on purpose).
+def load_from_file(path: str) -> dict:
+    with open(path,'r') as file:
+        return json.load(file)
+
+# Central class in which we create each component and node object from the circuit data (a dict).
+# The data can come from a file (load_from_file) or directly from the GUI in memory.
 class components_loader:
-    def __init__(self):
-        
+    def __init__(self,data: dict):
+
+        self.data = data
         self.nodes = {}
         self.components = {}
-        self.read_info() 
         self.format_component()
         self.format_source()
-        
-    def read_info(self):
-        with open("test_components.json", 'r') as file:
-            self.data = json.load(file)
-    
+
     # Extract each dictionary one by one, which are within the "components" list
     def format_component(self):
         for comp in self.data.get("components", []):
