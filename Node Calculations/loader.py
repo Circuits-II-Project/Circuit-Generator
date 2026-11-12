@@ -1,6 +1,15 @@
 import json 
 import components as cmps
 
+# component_type -> class to create, JSON field that holds its value
+# To support a new component add one line here.
+
+COMPONENT_TYPES = {
+    "resistor": (cmps.resistor, "resistance"),
+    "capacitor": (cmps.capacitor, "capacitance"),
+    "inductor": (cmps.inductor, "inductance"),
+}
+
 # Reads a circuit JSON file and returns its contents as a dict (outside the class on purpose).
 def load_from_file(path: str) -> dict:
     with open(path,'r') as file:
@@ -17,21 +26,28 @@ class components_loader:
         self.format_component()
         self.format_source()
 
-    # Extract each dictionary one by one, which are within the "components" list
+    # Extract each dictionary from the components list and create the right class for its type
     def format_component(self):
         for comp in self.data.get("components", []):
-            
-            resistor_obj = cmps.resistor(
-                comp["component_id"], 
-                comp["component_type"], 
-                comp["from_node"], 
-                comp["to_node"], 
-                comp["resistance"],
-                {"series": [], "parallel": [],}
-            )
-            self.components[resistor_obj.id] = resistor_obj
-            self.add_component_node(resistor_obj.from_node, resistor_obj)
-            self.add_component_node(resistor_obj.to_node, resistor_obj)
+
+            comp_type = comp["component_type"]
+            if comp_type not in COMPONENT_TYPES:
+                raise ValueError(f"Unknown component_type '{comp_type}' in {comp['component_id']}")
+
+            cls, value_field = COMPONENT_TYPES[comp_type]
+
+            comp_obj = cls(
+                comp["component_id"],
+                comp_type,
+                comp["from_node"],
+                comp["to_node"],
+                comp[value_field],
+                {"series": [], "parallel": []}
+            )            
+
+            self.components[comp_obj.id] = comp_obj
+            self.add_component_node(comp_obj.from_node, comp_obj)
+            self.add_component_node(comp_obj.to_node, comp_obj)
         
     def format_source(self):
         #User may not have added any sources yet, so it is optional

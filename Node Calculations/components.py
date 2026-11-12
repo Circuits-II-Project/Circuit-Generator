@@ -29,6 +29,17 @@ class resistor(component_manager):
 
         self.resistance = resistance
 
+#This class will store all formulas and information to a capacitor component
+class capacitor(component_manager):
+    def __init__(self, id, type, from_node, to_node, capacitance, tag):
+        super().__init__(id, type, from_node, to_node, tag)
+        self.capacitance = capacitance
+
+class inductor(component_manager):
+    def __init__(self, id, type, from_node, to_node, inductance, tag):
+        super().__init__(id, type, from_node, to_node, tag)
+        self.inductance = inductance
+
 # This Class will store the information of the voltage source.
 class source(component_manager):
     def __init__(self, id, type, from_node, to_node, voltage, frequency, tag):

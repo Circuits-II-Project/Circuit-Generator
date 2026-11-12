@@ -61,6 +61,20 @@ class AnalyzerTests(unittest.TestCase):
         al.connection_analyzer(load)
         self.assertEqual([c.id for c in load.components["R1"].tag["series"]], ["R2"])
 
+    def test_creates_capacitor_and_inductor(self):
+        data = {"components": [
+            {"component_id": "C1", "component_type": "capacitor", "from_node": "A", "to_node": "B", "capacitance": 1e-6},
+            {"component_id": "L1", "component_type": "inductor", "from_node": "B", "to_node": "C", "inductance": 0.01},
+        ]}
+        load = cl.components_loader(data)
+        self.assertEqual(load.components["C1"].capacitance, 1e-6)
+        self.assertEqual(load.components["L1"].inductance, 0.01)
+
+    def test_unkown_type_raises(self):
+        data = {"components": [{"component_id": "X1", "component_type": "diode",
+                                "from_node": "A", "to_node": "B"}]}
+        with self.assertRaises(ValueError):
+            cl.components_loader(data)
 
 if __name__ == "__main__":
     unittest.main()
