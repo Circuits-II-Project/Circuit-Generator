@@ -1,5 +1,5 @@
 import json 
-import components as cmps
+from . import components as cmps
 
 # component_type -> class to create, JSON field that holds its value
 # To support a new component add one line here.

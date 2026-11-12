@@ -105,3 +105,24 @@ class connection_analyzer:
                 stack.extend(c.tag["series"])
             groups.append(sorted(group))
         return groups
+
+    def to_dict(self):
+        #Convierte los resultados en datos simples para envialos como JSON
+        ids = lambda comps: [c.id for c in comps]
+        return{
+            "nodes":{
+                node_id: sorted(ids(node.connected_components))
+                for node_id, node in self.load.nodes.items()
+            },
+            "components": {
+                cid: {
+                    "type": comp.type,
+                    "from": comp.from_node,
+                    "to": comp.to_node,
+                    "series": ids(comp.tag["series"]),
+                    "parallel": ids(comp.tag["parallel"]),
+                }
+                for cid, comp in self.load.components.items()
+            },
+            "series_groups": self.series_groups(),
+        }

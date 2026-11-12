@@ -30,9 +30,9 @@ node_count = 0
 
 # The path must be added BEFORE importing loader/analyzer, otherwise Python can't find them
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(HERE, '..','Node Calculations'))
-import loader as cl
-import analyzer as al
+sys.path.append(os.path.join(HERE, '..'))
+from node_calculations import loader as cl
+from node_calculations import analyzer as al
 
 
 schemdraw.use('matplotlib')
@@ -77,11 +77,8 @@ def add_component(comp_type, from_node = None, to_node = None, value = None):
     rebuild()
 
 def tags_as_json():
-    #objs cant go through jsonify so send only the ids
-    return{
-        cid: {kind: [other.id for other in others] for kind, others in comp.tag.items()}
-        for cid, comp in current_load.components.items()
-        }
+    #Analyzer does the simple data conversion
+    return current_analysis.to_dict()
 
 
 def redraw():

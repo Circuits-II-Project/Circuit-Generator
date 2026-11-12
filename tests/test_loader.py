@@ -2,12 +2,12 @@ import os
 import sys
 import unittest
 
-# Allow importing loader/analyzer from "Node Calculations"
+# Allow importing the node_calculations package from Circuit-Generator
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(HERE, "..", "Node Calculations"))
+sys.path.append(os.path.join(HERE, ".."))
 
-import loader as cl
-import analyzer as al
+from node_calculations import loader as cl
+from node_calculations import analyzer as al
 
 
 # Helpers to build test data quickly
@@ -42,7 +42,7 @@ class LoaderTests(unittest.TestCase):
         self.assertEqual(load.components, {})
 
     def test_load_from_file(self):
-        path = os.path.join(HERE, "..", "Node Calculations", "test_components.json")
+        path = os.path.join(HERE, "..", "node_calculations", "test_components.json")
         data = cl.load_from_file(path)
         self.assertEqual(len(data["components"]), 4)
 
@@ -106,6 +106,19 @@ class AnalyzerTests(unittest.TestCase):
         load = cl.components_loader(data)
         self.assertEqual(al.connection_analyzer(load).series_groups(), [["R1", "R2", "R3"]])
 
+    def test_to_dict(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "A", "B")]}
+        out = al.connection_analyzer(cl.components_loader(data)).to_dict()
+        self.assertEqual(out["nodes"]["A"], ["R1", "R2"])
+        self.assertEqual(out["components"]["R1"],
+                         {"type": "resistor", "from": "A", "to": "B", "series": [], "parallel": ["R2"]})
+
+    def test_to_dict(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "A", "B")]}
+        out = al.connection_analyzer(cl.components_loader(data)).to_dict()
+        self.assertEqual(out["nodes"]["A"], ["R1", "R2"])
+        self.assertEqual(out["components"]["R1"],
+                         {"type": "resistor", "from": "A", "to": "B", "series": [], "parallel": ["R2"]})
 
 if __name__ == "__main__":
     unittest.main()
