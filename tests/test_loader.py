@@ -76,5 +76,21 @@ class AnalyzerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             cl.components_loader(data)
 
+    def test_rebuild_drops_stale_series_tag(self):
+        data = {"components": [
+            {"component_id": "R1", "component_type": "resistor", "from_node": "A", "to_node": "B", "resistance": 100},
+            {"component_id": "R2", "component_type": "resistor", "from_node": "B", "to_node": "C", "resistance": 200},
+        ]}
+        load = cl.components_loader(data)
+        al.connection_analyzer(load)
+        self.assertEqual([c.id for c in load.components["R1"].tag["series"]], ["R2"])
+
+        #Node b goes from 2 to 3 components, so R1 and R2 are no longer in series
+        data["components"].append({"component_id": "R3", "component_type": "resistor", "from_node": "B", "to_node": "D", "resistance": 300})
+        load = cl.components_loader(data)
+        al.connection_analyzer(load)
+        self.assertEqual(load.components["R1"].tag["series"], [])
+        
+
 if __name__ == "__main__":
     unittest.main()

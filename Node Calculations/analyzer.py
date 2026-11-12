@@ -8,10 +8,16 @@ class connection_analyzer:
         self.node_temp_list = []
         self.parallel_temp_list = []
         self.series_temp_list = []
+
+        # Clear old tags FIRST, then compute fresh ones
+        for comp in self.load.components.values():
+            comp.tag["series"] = []
+            comp.tag["parallel"] = []
+
         self.separate_components()
         self.tag_series()
         self.tag_parallel()
-        
+
         
     def separate_components(self):
     
@@ -36,10 +42,10 @@ class connection_analyzer:
                 c2 = comp[1]
                 
                 # Check that the component is not already registered. If its not, then we save it
-                if c1 not in c2.tag["series"]:
-                    c1.tag["series"].append(c2)
-                
                 if c2 not in c1.tag["series"]:
+                    c1.tag["series"].append(c2)
+
+                if c1 not in c2.tag["series"]:
                     c2.tag["series"].append(c1)
                     
                 #print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
