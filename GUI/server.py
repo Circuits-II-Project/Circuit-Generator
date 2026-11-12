@@ -46,6 +46,7 @@ def rebuild():
     current_load = cl.components_loader(circuit_data)
     current_analysis = al.connection_analyzer(current_load)
     redraw()
+    return current_analysis.to_dict()
 
 def next_id(comp_type):
     #Uses the highest existing number do ids stay unique even after removing

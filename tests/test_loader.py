@@ -112,13 +112,14 @@ class AnalyzerTests(unittest.TestCase):
         self.assertEqual(out["nodes"]["A"], ["R1", "R2"])
         self.assertEqual(out["components"]["R1"],
                          {"type": "resistor", "from": "A", "to": "B", "series": [], "parallel": ["R2"]})
-
-    def test_to_dict(self):
-        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "A", "B")]}
-        out = al.connection_analyzer(cl.components_loader(data)).to_dict()
-        self.assertEqual(out["nodes"]["A"], ["R1", "R2"])
-        self.assertEqual(out["components"]["R1"],
-                         {"type": "resistor", "from": "A", "to": "B", "series": [], "parallel": ["R2"]})
+   
+    def test_full_circuit_from_file(self):
+        path = os.path.join(HERE, "..", "node_calculations", "test_components.json")
+        out = al.connection_analyzer(cl.components_loader(cl.load_from_file(path))).to_dict()
+        comps = out["components"]
+        self.assertEqual(comps["R1"]["parallel"], ["R2", "R3"])
+        self.assertEqual(comps["R4"]["series"], ["V1"])
+        self.assertEqual(out["nodes"]["A"], ["R1", "R2", "R3", "V1"])
 
 if __name__ == "__main__":
     unittest.main()
