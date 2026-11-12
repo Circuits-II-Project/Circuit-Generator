@@ -1,0 +1,66 @@
+import os
+import sys
+import unittest
+
+# Allow importing loader/analyzer from "Node Calculations"
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(HERE, "..", "Node Calculations"))
+
+import loader as cl
+import analyzer as al
+
+
+# Helpers to build test data quickly
+def resistor(rid, a, b, r=100.0):
+    return {"component_id": rid, "component_type": "resistor",
+            "from_node": a, "to_node": b, "resistance": r}
+
+SOURCE = {"source_id": "V1", "source_type": "DC", "source_voltage": 12.0,
+          "source_frequency": None, "from_node": "A", "to_node": "C"}
+
+
+class LoaderTests(unittest.TestCase):
+
+    def test_accepts_dict_in_memory(self):        # change #1
+        data = {"source": SOURCE, "components": [resistor("R1", "A", "B")]}
+        load = cl.components_loader(data)
+        self.assertIn("R1", load.components)
+        self.assertIn("V1", load.components)
+
+    def test_creates_nodes(self):
+        data = {"source": SOURCE, "components": [resistor("R1", "A", "B")]}
+        load = cl.components_loader(data)
+        self.assertEqual(set(load.nodes), {"A", "B", "C"})
+
+    def test_without_source_does_not_crash(self):  # change #2
+        data = {"components": [resistor("R1", "A", "B")]}
+        load = cl.components_loader(data)
+        self.assertNotIn("V1", load.components)
+
+    def test_empty_circuit(self):                  # GUI with nothing added yet
+        load = cl.components_loader({})
+        self.assertEqual(load.components, {})
+
+    def test_load_from_file(self):
+        path = os.path.join(HERE, "..", "Node Calculations", "test_components.json")
+        data = cl.load_from_file(path)
+        self.assertEqual(len(data["components"]), 4)
+
+
+class AnalyzerTests(unittest.TestCase):
+
+    def test_parallel(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "A", "B")]}
+        load = cl.components_loader(data)
+        al.connection_analyzer(load)
+        self.assertEqual([c.id for c in load.components["R1"].tag["parallel"]], ["R2"])
+
+    def test_series(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "B", "C")]}
+        load = cl.components_loader(data)
+        al.connection_analyzer(load)
+        self.assertEqual([c.id for c in load.components["R1"].tag["series"]], ["R2"])
+
+
+if __name__ == "__main__":
+    unittest.main()

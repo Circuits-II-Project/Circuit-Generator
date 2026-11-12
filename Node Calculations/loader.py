@@ -34,15 +34,20 @@ class components_loader:
             self.add_component_node(resistor_obj.to_node, resistor_obj)
         
     def format_source(self):
+        #User may not have added any sources yet, so it is optional
+
+        if "source" not in self.data or self.data["source"] is None:
+            return
         
+        src = self.data["source"]
         source_obj = cmps.source(
-            self.data["source"]["source_id"], 
-            self.data["source"]["source_type"], 
-            self.data["source"]["from_node"], 
-            self.data["source"]["to_node"], 
-            self.data["source"]["source_voltage"], 
-            self.data["source"]["source_frequency"], 
-            {"series": [], "parallel": [],}
+            src["source_id"],
+            src["source_type"],
+            src["from_node"],
+            src["to_node"],
+            src["source_voltage"],
+            src.get("source_frequency"), #dc may not have one
+            {"series": [], "parallel": []}
         )
         self.components[source_obj.id] = source_obj
         self.add_component_node(source_obj.from_node, source_obj)
