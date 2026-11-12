@@ -18,6 +18,12 @@ class connection_analyzer:
         self.tag_series()
         self.tag_parallel()
 
+        # Sort once at the end so the GUI always shows tags in the same order
+        for comp in self.load.components.values():
+            comp.tag["series"].sort(key=lambda c: c.id)
+            comp.tag["parallel"].sort(key=lambda c: c.id)
+
+
         
     def separate_components(self):
     
@@ -29,6 +35,11 @@ class connection_analyzer:
                 
                 
             self.node_components[node.id] = self.node_temp_list # Assignt the created list into the general dictionary
+
+    @staticmethod
+    def same_nodes(a,b):
+        #True if both components connect with the exact same two nodes (order does not matter)
+        return {a.from_node, a.to_node} == {b.from_node, b.to_node}
     
     def tag_series(self):
         
@@ -37,9 +48,10 @@ class connection_analyzer:
             # Check if the amount of components in a node is exactly 2    
             if len(comp) == 2:
                 
-                # Assign the components to temp variables
-                c1 = comp[0] 
-                c2 = comp[1]
+                c1,c2=comp
+                #two components on the same two nodes are parallel, not series (this also skips a self-loop where c1=c2)
+                if self.same_nodes(c1,c2):
+                    continue
                 
                 # Check that the component is not already registered. If its not, then we save it
                 if c2 not in c1.tag["series"]:
@@ -77,3 +89,19 @@ class connection_analyzer:
                             #print(item.tag)
                         # comp.tag["parallel"] = overlap
   
+    def series_groups(self):
+        # Follow series links to collect whole chains: R1-R2-R3 -> ["R1", "R2", "R3"]
+        seen, groups = set(), []
+        for start in self.load.components.values():
+            if start in seen or not start.tag["series"]:
+                continue
+            group, stack = [], [start]
+            while stack:
+                c = stack.pop()
+                if c in seen:
+                    continue
+                seen.add(c)
+                group.append(c.id)
+                stack.extend(c.tag["series"])
+            groups.append(sorted(group))
+        return groups

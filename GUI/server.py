@@ -119,6 +119,8 @@ def add(comp_type):
     if comp_type not in cl.COMPONENT_TYPES:
         return jsonify(errors=f"unknown type '{comp_type}'"), 400
     body = request.get_json(silent=True) or {}
+    if body.get("from_node") and body.get("from_node") == body.get("to_node"):
+        return jsonify(errors="from_node and to_node must be different"), 400
     add_component(comp_type, body.get("from_node"), body.get("to_node"), body.get("value"))
     return jsonify(tags_as_json())
 

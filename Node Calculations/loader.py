@@ -34,6 +34,8 @@ class components_loader:
             if comp_type not in COMPONENT_TYPES:
                 raise ValueError(f"Unknown component_type '{comp_type}' in {comp['component_id']}")
 
+            if comp["from_node"] == comp["to_node"]:
+                raise ValueError(f"{comp['component_id']} connects node ' {comp['from_node']}' to itself")
             cls, value_field = COMPONENT_TYPES[comp_type]
 
             comp_obj = cls(

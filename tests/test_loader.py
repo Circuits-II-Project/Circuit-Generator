@@ -90,7 +90,22 @@ class AnalyzerTests(unittest.TestCase):
         load = cl.components_loader(data)
         al.connection_analyzer(load)
         self.assertEqual(load.components["R1"].tag["series"], [])
-        
+
+    def test_parallel_pair_is_not_series(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "A", "B")]}
+        load = cl.components_loader(data)
+        al.connection_analyzer(load)
+        self.assertEqual(load.components["R1"].tag["series"], [])
+
+    def test_self_loop_raises(self):
+        with self.assertRaises(ValueError):
+            cl.components_loader({"components": [resistor("R1", "A", "A")]})
+
+    def test_series_groups(self):
+        data = {"components": [resistor("R1", "A", "B"), resistor("R2", "B", "C"), resistor("R3", "C", "D")]}
+        load = cl.components_loader(data)
+        self.assertEqual(al.connection_analyzer(load).series_groups(), [["R1", "R2", "R3"]])
+
 
 if __name__ == "__main__":
     unittest.main()
