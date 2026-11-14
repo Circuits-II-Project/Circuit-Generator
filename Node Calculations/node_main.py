@@ -1,31 +1,37 @@
 import loader as cl
 import analyzer as al
-import calculations as calc
+import reducer as redr
+import solver as slv
 import os
 
 # Wipes the terminal screen completely clean before printing anything else
 os.system('cls' if os.name == 'nt' else 'clear')
 if __name__ == "__main__":
     load = cl.components_loader()
-    al.connection_analyzer(load)
-    calc.calculate_components(load)
-    al.connection_analyzer(load)
-    calc.calculate_components(load)
-    #calc.calculate_components(load)
-    # while len(load.components) > 1:
-    #     al.connection_analyzer(load)
+    # al.connection_analyzer(load)
+    # calc.calculate_components(load)
+    # al.connection_analyzer(load)
+    # calc.calculate_components(load)
+    # calc.calculate_components(load)
+    while len(load.components) - 1 > 1:
+        al.connection_analyzer(load)
     
-    #     # Track how many components you started this pass with
-    #     starting_count = len(load.components)
+        # Track how many components you started this pass with
+        starting_count = len(load.components)
         
-    #     calc.calculate_components(load)
+        redr.calculate_components(load)
         
-    #     # If a full pass ran and NOTHING was reduced, break out to avoid locking up
-    #     if len(load.components) == starting_count:
-    #         print("Warning: Circuit could not be fully reduced (possible unhandled topology like a bridge).")
-    #         break
-            
+        # If a full pass ran and NOTHING was reduced, break out to avoid locking up
+        if len(load.components) == starting_count:
+            break
     
+    # Check the final state AFTER the loop exits
+    if len(load.components) -1 > 1:
+        print(f"Warning: Circuit could not be fully reduced. {len(load.components) - 1} unreduced components remaining (possible unhandled topology like a bridge).")
+    else:
+        print("Success: Circuit successfully reduced to a single equivalent component!")
+    
+    slv.circuit_solver(load)
     
     
     print("=" * 50)

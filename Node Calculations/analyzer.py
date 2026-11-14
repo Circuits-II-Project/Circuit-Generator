@@ -74,7 +74,7 @@ class connection_analyzer:
                             
                             # Loop through all components and check that the current component is not equal to the item we are checking in the overlap
                             # Ensures that each components saves the parallel components to it and NOT itself
-                            parallel_comp = [other for other in overlap if other != item] 
+                            parallel_comp = [other for other in overlap if other != item and getattr(other, "type", "resistor") == "resistor"]
                             item.tag["parallel"] = parallel_comp
                             
                             #print(item.tag)

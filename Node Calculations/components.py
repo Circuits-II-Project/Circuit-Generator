@@ -40,6 +40,7 @@ class resistor(component_manager):
         
         # Elevate the obtained resistance to the power of -1
         equivalent_resistance **= -1
+        
         name_id = "parallel_" + "_".join([res["id"] for res in parallel_resistors])   
         eq_parallel_resistors = resistor(
                             id=name_id,
@@ -54,12 +55,35 @@ class resistor(component_manager):
     @classmethod
     def calculate_eqr_series(cls, series_resistors):
         equivalent_resistance = 0
+        all_nodes = []
         
-        # Add the resistor values directly in a for loop
+        # Sum resistance and collect all connected nodes
         for current_res in series_resistors:
             equivalent_resistance += current_res["resistance"] 
+            all_nodes.append(current_res["from_node"])
+            all_nodes.append(current_res["to_node"])
         
-        return equivalent_resistance
+        # Count how many times each node appears
+        node_counts = {}
+        for n in all_nodes:
+            node_counts[n] = node_counts.get(n, 0) + 1
+            
+        # Outer nodes appear only once (endpoints), internal nodes appear twice (shared)
+        outer_nodes = [n for n, count in node_counts.items() if count == 1]
+        
+        
+        name_id = "series_" + "_".join([res["id"] for res in series_resistors])   
+        eq_series_resistors = resistor(
+                            id=name_id,
+                            type="resistor",
+                            from_node=outer_nodes[0],
+                            to_node=outer_nodes[1],
+                            resistance=equivalent_resistance,
+                            tag={"series": [], "parallel": [],}
+                        )
+        
+        
+        return eq_series_resistors
     
 # This Class will store the information of the voltage source.
 class source(component_manager):

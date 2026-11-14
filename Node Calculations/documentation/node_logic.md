@@ -50,24 +50,24 @@
 - The information that is saved about each component is saved between these classes.
 - The classes are correctly structured for adding mroe components without causing issues (inductors and capacitors).
   
-*resistor Class*
+**resistor Class**
 - It will hold the functions for calculating any related value of voltage or current with the resistor
 - It will inheriate from the component_manager Class to store information as well
 
-*node Class*
+**node Class**
 - It will keep track of the components on the circuit, primarely the nodes that are connected to the saved components. It will save the `from` and `to` 
   nodes of each component, each one correctly identified to their respective component.
   
 
-*source Class*
+**source Class**
 - Similary to the resistor Class, but with the information of the voltage source of the circuit. It will also inheriate
   from the component_manager Class.
 
-*component_loader Class*
+**component_loader Class**
 - The main control of all the classes. Here we extract the information from the JSON file and create the class objects of each component in the
   circuit and the node Class objects for identifying the position of each component.
 
-*component_manager Class*
+**component_manager Class**
 - Superclass from which the ressitor and node Class inheriate variables, since there is a direct connection and similar values between the components
 
 ## Before Calculations
@@ -105,4 +105,44 @@
 - For ensuring series behavior, we check that a node has only two components connected to it. If its true, then those two components are in series.
 - For parallel, we must compare the components between all the nodes. Then, we check which components have the same nodes. Those components will be in parallel.
 
-- ENSURE THAT THE NODES ARE NOT CHECKED TWICE, ONLY ONCE (FIX)
+- Nodes are checked only once.
+
+## Calculations
+
+- For obtaining the equivalent resistance, we must undergo a process in which we add the available components together.
+- For this, we will have a class that will manage these calculations.
+
+**calculate_components**
+
+- This class will receive all the loaded info that was retrieved from the json file, an object that points to the original class.
+
+- Firstly, it will store the resistors in a list, in order to separate them.
+  1. Loop through the components that are stored in the loader object. 
+  2. Check that the component is a resitor
+  3. Gather the information of the resistor into a dictionary for easier use.
+  4. Append that component to our list.
+
+- After completing the storage process, we move on to the reduction process, in which we will determine if we reduce parallel first or series first. It will depend on the amoun of parallel components that a resistor has. 
+  - If it has more than 0 components in parallel, it will calculate it
+  - If it has more than 0 components in series, it will calcualte it
+  
+- For determining the equivalent resistance, we will have two methods:
+  - `calculate_parallel_resistors` -> Here we will follow a step by step for loop to ensure that we obtaint he wanted information.
+    1. We retrieve the resistor object
+    2. Loop through the parallel partners of the resistor
+    3. If the partner has not been checked, we append it to the checklist
+    4. We loop through the resistor objects again
+    5. If the object's id is the same as the partner resistor, we append it to the resistors list
+    6. Finally, we call the class method in the resistor class for creating a new resistor object with the new combined parallel resistors
+    7. After creating the class, we collect the ids of the combined resistors and run them through a for loop
+    8. In the loop we use each id and use the remove method of the loader class in order to remove the object of that resistor from out list
+    9. Finally, we add the new created resistor object and reset the checklist and stored resistor list
+
+  - `calculate_series_resistors` -> For this one, a long explanation will not be given simply because the process and code are almost identical. The only difference will be that we would use the methods for resistors in series.
+
+**main file**
+- In the main file that will this area, it will run a while loop that will check multiple times for how many reductions can be done. Once the amount of components is 1 or less, it will stop the check and give the result for the equivalent resistance of the circuit.
+
+
+
+

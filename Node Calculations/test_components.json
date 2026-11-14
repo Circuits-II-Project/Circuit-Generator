@@ -1,49 +1,62 @@
 {
-    "circuit_id": "C001",
-    "circuit_name": "Circuit 1",
-    "circuit_type": "series",
+    "circuit_id": "C006",
+    "circuit_name": "Multi-Stage Complex Ladder",
+    "circuit_type": "ladder",
     
     "source": 
     {
         "source_id": "V1",
         "source_type": "DC",
-        "source_voltage": 12.0,
+        "source_voltage": 24.0,
         "source_frequency": null,
         "from_node": "A",
-        "to_node": "C"
+        "to_node": "E"
     },
     
-    "nodes": ["A", "B", "C"],
+    "nodes": ["A", "B", "C", "D", "E"],
     
     "components": [
-    {
-      "component_id": "R1",
-      "component_type": "resistor",
-      "from_node": "A",
-      "to_node": "B",
-      "resistance": 100.0,
-      "tag": "A"
-    },
-    {
-      "component_id": "R2",
-      "component_type": "resistor",
-      "from_node": "A",
-      "to_node": "B",
-      "resistance": 200.0
-    },
-    {
-      "component_id": "R3",
-      "component_type": "resistor",
-      "from_node": "A",
-      "to_node": "B",
-      "resistance": 300.0
-    },
-    {
-      "component_id": "R4",
-      "component_type": "resistor",
-      "from_node": "B",
-      "to_node": "C",
-      "resistance": 300.0
-    }
-  ]
+        {
+          "component_id": "R1",
+          "component_type": "resistor",
+          "from_node": "A",
+          "to_node": "B",
+          "resistance": 50.0
+        },
+        {
+          "component_id": "R2",
+          "component_type": "resistor",
+          "from_node": "B",
+          "to_node": "C",
+          "resistance": 100.0
+        },
+        {
+          "component_id": "R3",
+          "component_type": "resistor",
+          "from_node": "B",
+          "to_node": "C",
+          "resistance": 100.0
+        },
+        {
+          "component_id": "R4",
+          "component_type": "resistor",
+          "from_node": "C",
+          "to_node": "D",
+          "resistance": 50.0
+        },
+        {
+          "component_id": "R5",
+          "component_type": "resistor",
+          "from_node": "D",
+          "to_node": "E",
+          "resistance": 200.0
+        },
+        {
+          "component_id": "R6",
+          "component_type": "resistor",
+          "from_node": "D",
+          "to_node": "E",
+          "resistance": 200.0
+        }
+    ]
 }
