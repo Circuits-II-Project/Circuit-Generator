@@ -15,6 +15,36 @@ class components_loader:
         with open("test_components.json", 'r') as file:
             self.data = json.load(file)
     
+    def remove_component(self, component_id):
+        if component_id in self.components:
+            comp = self.components[component_id]
+            
+            # 1. Remove component from the from_node's connected list
+            if comp.from_node in self.nodes:
+                self.nodes[comp.from_node].connected_components = [
+                    c for c in self.nodes[comp.from_node].connected_components 
+                    if c.id != component_id
+                ]
+                
+            # 2. Remove component from the to_node's connected list
+            if comp.to_node in self.nodes:
+                self.nodes[comp.to_node].connected_components = [
+                    c for c in self.nodes[comp.to_node].connected_components 
+                    if c.id != component_id
+                ]
+                
+            # 3. Finally, delete it from the master components dictionary
+            del self.components[component_id]
+        
+    def add_component(self, component):
+        self.components[component.id] = component
+        
+        # 2. Register it with its nodes so the connection analyzer sees it next time
+        self.add_component_node(component.from_node, component)
+        self.add_component_node(component.to_node, component)
+
+        
+        
     # Extract each dictionary one by one, which are within the "components" list
     def format_component(self):
         for comp in self.data.get("components", []):

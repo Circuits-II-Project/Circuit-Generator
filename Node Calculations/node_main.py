@@ -9,7 +9,22 @@ if __name__ == "__main__":
     load = cl.components_loader()
     al.connection_analyzer(load)
     calc.calculate_components(load)
+    al.connection_analyzer(load)
+    calc.calculate_components(load)
+    #calc.calculate_components(load)
+    # while len(load.components) > 1:
+    #     al.connection_analyzer(load)
     
+    #     # Track how many components you started this pass with
+    #     starting_count = len(load.components)
+        
+    #     calc.calculate_components(load)
+        
+    #     # If a full pass ran and NOTHING was reduced, break out to avoid locking up
+    #     if len(load.components) == starting_count:
+    #         print("Warning: Circuit could not be fully reduced (possible unhandled topology like a bridge).")
+    #         break
+            
     
     
     

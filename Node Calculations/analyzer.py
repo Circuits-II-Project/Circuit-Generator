@@ -35,12 +35,16 @@ class connection_analyzer:
                 c1 = comp[0] 
                 c2 = comp[1]
                 
+                # FIX: Make sure BOTH components are resistors (skip sources)
+                if getattr(c1, "type", "resistor") != "resistor" or getattr(c2, "type", "resistor") != "resistor":
+                    continue
+                
                 # Check that the component is not already registered. If its not, then we save it
                 if c1 not in c2.tag["series"]:
-                    c1.tag["series"].append(c2)
+                    c2.tag["series"].append(c1)
                 
                 if c2 not in c1.tag["series"]:
-                    c2.tag["series"].append(c1)
+                    c1.tag["series"].append(c2)
                     
                 #print(f"Series Components: {comp} | node: {node}") # Prints the components that are connected to the same node.
                 
@@ -63,6 +67,11 @@ class connection_analyzer:
                         
                         # Loop through the components in the overlap
                         for item in overlap:
+                            
+                            # FIX: Skip if the item itself is not a resistor
+                            if getattr(item, "type", "resistor") != "resistor":
+                                continue
+                            
                             # Loop through all components and check that the current component is not equal to the item we are checking in the overlap
                             # Ensures that each components saves the parallel components to it and NOT itself
                             parallel_comp = [other for other in overlap if other != item] 

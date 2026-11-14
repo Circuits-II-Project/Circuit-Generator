@@ -28,7 +28,39 @@ class resistor(component_manager):
         super().__init__(id, type, from_node, to_node, tag)
 
         self.resistance = resistance
+    
+    @classmethod
+    def calculate_eqr_parallel(cls, parallel_resistors):
+        equivalent_resistance = 0
 
+        # Add the resistors in fractions
+        for current_res in parallel_resistors:
+            #print(resistor["resistance"])
+            equivalent_resistance += 1/current_res["resistance"]
+        
+        # Elevate the obtained resistance to the power of -1
+        equivalent_resistance **= -1
+        name_id = "parallel_" + "_".join([res["id"] for res in parallel_resistors])   
+        eq_parallel_resistors = resistor(
+                            id=name_id,
+                            type="resistor",
+                            from_node=parallel_resistors[0]["from_node"],
+                            to_node=parallel_resistors[0]["to_node"],
+                            resistance=equivalent_resistance,
+                            tag={"series": [], "parallel": [],}
+                        )
+        return eq_parallel_resistors
+    
+    @classmethod
+    def calculate_eqr_series(cls, series_resistors):
+        equivalent_resistance = 0
+        
+        # Add the resistor values directly in a for loop
+        for current_res in series_resistors:
+            equivalent_resistance += current_res["resistance"] 
+        
+        return equivalent_resistance
+    
 # This Class will store the information of the voltage source.
 class source(component_manager):
     def __init__(self, id, type, from_node, to_node, voltage, frequency, tag):
