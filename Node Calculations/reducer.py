@@ -9,9 +9,11 @@ class calculate_components:
         self.resistors = []
         self.checked_resistors = []
         self.loaded_info = loaded_info
+        
         self.store_resistors()
         self.reduction_process()
-        #self.calculate_series_resistors()
+        
+        
     
     
     def reduction_process(self):
@@ -43,6 +45,16 @@ class calculate_components:
                 # Calculate equivalent resistor
                 eq_res = cmps.resistor.calculate_eqr_parallel(group_objs)
                 
+                
+                # Record the reduction history step
+                history_entry = {
+                    "parent_id": eq_res.id,
+                    "type": "parallel",
+                    "children_ids": group_ids,
+                    "resistance": eq_res.resistance
+                }
+                self.loaded_info.reduction_history.append(history_entry)
+                         
                 # Remove old components and add the new equivalent one
                 for r_id in group_ids:
                     self.loaded_info.remove_component(r_id)
@@ -72,6 +84,15 @@ class calculate_components:
                 
                 # Calculate equivalent resistor
                 eq_res = cmps.resistor.calculate_eqr_series(group_objs)
+                
+                # Record the reduction history step
+                history_entry = {
+                    "parent_id": eq_res.id,
+                    "type": "series",
+                    "children_ids": group_ids,
+                    "resistance": eq_res.resistance
+                }
+                self.loaded_info.reduction_history.append(history_entry)
                 
                 # Remove old components and add the new equivalent one
                 for r_id in group_ids:

@@ -7,6 +7,8 @@ class components_loader:
         
         self.nodes = {}
         self.components = {}
+        self.reduction_history = []
+        self.complete_data = {}
         self.read_info() 
         self.format_component()
         self.format_source()
@@ -58,6 +60,7 @@ class components_loader:
                 {"series": [], "parallel": [],}
             )
             self.components[resistor_obj.id] = resistor_obj
+            self.complete_data[resistor_obj.id] = resistor_obj
             self.add_component_node(resistor_obj.from_node, resistor_obj)
             self.add_component_node(resistor_obj.to_node, resistor_obj)
         
@@ -73,6 +76,7 @@ class components_loader:
             {"series": [], "parallel": [],}
         )
         self.components[source_obj.id] = source_obj
+        self.complete_data[source_obj.id] = source_obj
         self.add_component_node(source_obj.from_node, source_obj)
         self.add_component_node(source_obj.to_node, source_obj)
         

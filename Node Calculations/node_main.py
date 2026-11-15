@@ -33,7 +33,6 @@ if __name__ == "__main__":
     
     slv.circuit_solver(load)
     
-    
     print("=" * 50)
     print("               CIRCUIT NODES              ")
     print("=" * 50)
