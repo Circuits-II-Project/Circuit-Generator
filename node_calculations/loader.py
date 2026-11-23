@@ -108,6 +108,8 @@ class components_loader:
             return
         
         src = self.data["source"]
+        validate_component(SOURCE_TYPE, src.get("from_node"), src.get("to_node"),
+                           src.get("source_voltage"), src.get("source_id"))
         source_obj = cmps.source(
             src["source_id"],
             src["source_type"],

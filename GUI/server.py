@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 import schemdraw
 import schemdraw.elements as elm
 from flask import Flask, send_from_directory, request, jsonify 
+from node_calculations.validation import check_circuit
  
 # single source of truth: circuits as plain data (same shape as the JSON)
 circuit_data = {"components": [], "source": None, "ground": None}
@@ -156,6 +157,10 @@ def set_ground(node):
         draft["ground"] = node
     commit(change)
 
+def check_json():
+    problems = check_circuit(circuit_data)
+    return {"ok": not problems, "problems": problems}
+
 def state_json():
     #Analyzer does the simple data conversion
     out = current_analysis.to_dict()
@@ -163,6 +168,7 @@ def state_json():
     out["source"] = circuit_data.get("source")
     out["ground"] = circuit_data.get("ground")
     out["last_node"] = counters["last_node"]
+    out["check"] = check_json()      # so the GUI can enable/disable Calculate
     return out
 
 
@@ -236,6 +242,10 @@ def reset():
 @app.route('/state', methods=['GET'])
 def state():
     return jsonify(state_json())
+
+@app.route('/check', methods=['GET'])
+def check():
+    return jsonify(check_json())
 
 #Serve the page and the image
 @app.route('/')
