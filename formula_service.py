@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+# AC/DC helpers live in a folder with spaces in its name, so add it to the path
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "AC & DC Functions"))
+
 from AC_behavior_test import (
     calc_capacitive_reactance,
     calc_impedance,
