@@ -1,3 +1,5 @@
+from .loader import id_sort_key
+
 # Analyze the connections between nodes for determining series or parallel
 class connection_analyzer:
     def __init__(self, loaded_info):
@@ -20,8 +22,8 @@ class connection_analyzer:
 
         # Sort once at the end so the GUI always shows tags in the same order
         for comp in self.load.components.values():
-            comp.tag["series"].sort(key=lambda c: c.id)
-            comp.tag["parallel"].sort(key=lambda c: c.id)
+            comp.tag["series"].sort(key=lambda c: id_sort_key(c.id))
+            comp.tag["parallel"].sort(key=lambda c: id_sort_key(c.id))
 
 
         
@@ -103,16 +105,17 @@ class connection_analyzer:
                 seen.add(c)
                 group.append(c.id)
                 stack.extend(c.tag["series"])
-            groups.append(sorted(group))
-        return groups
+            groups.append(sorted(group, key=id_sort_key))
+        return sorted(groups, key=lambda g: id_sort_key(g[0]))
 
     def to_dict(self):
-        #Convierte los resultados en datos simples para envialos como JSON
-        ids = lambda comps: [c.id for c in comps]
+        # Turn the results into plain data (IDs only) so they can be sent as JSON.
+        # Everything is sorted by number (R2 before R10) so the GUI shows a stable order.
+        ids = lambda comps: sorted((c.id for c in comps), key=id_sort_key)
         return{
             "nodes":{
-                node_id: sorted(ids(node.connected_components))
-                for node_id, node in self.load.nodes.items()
+                node_id: ids(self.load.nodes[node_id].connected_components)
+                for node_id in sorted(self.load.nodes, key=id_sort_key)
             },
             "components": {
                 cid: {
@@ -122,7 +125,7 @@ class connection_analyzer:
                     "series": ids(comp.tag["series"]),
                     "parallel": ids(comp.tag["parallel"]),
                 }
-                for cid, comp in self.load.components.items()
+                for cid, comp in sorted(self.load.components.items(), key=lambda kv: id_sort_key(kv[0]))
             },
             "series_groups": self.series_groups(),
         }

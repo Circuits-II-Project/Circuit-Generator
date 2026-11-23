@@ -1,4 +1,7 @@
 import json 
+import math
+import re
+from numbers import Real
 from . import components as cmps
 
 # component_type -> class to create, JSON field that holds its value
@@ -9,6 +12,52 @@ COMPONENT_TYPES = {
     "capacitor": (cmps.capacitor, "capacitance"),
     "inductor": (cmps.inductor, "inductance"),
 }
+
+SOURCE_TYPE = "source"
+
+def check_type(comp_type, comp_id=None):
+    prefix = f"{comp_id}: " if comp_id else ""
+    if comp_type is None or (isinstance(comp_type, str) and not comp_type.strip()):
+        raise ValueError(f"{prefix}Missing field: component type")
+    if comp_type not in COMPONENT_TYPES and comp_type != SOURCE_TYPE:
+        allowed = ", ".join([*COMPONENT_TYPES, SOURCE_TYPE])
+        raise ValueError(f"{prefix}Unknown component type '{comp_type}'. Use one of: {allowed}")
+
+def validate_component(comp_type, from_node, to_node, value, comp_id=None):
+    """Check one component before it is added. Raises ValueError with a readable
+    message, or returns the value as a float when everything is fine."""
+    prefix = f"{comp_id}: " if comp_id else ""
+
+    def missing(field):
+        return field is None or (isinstance(field, str) and not field.strip())
+
+    # Order: type, then nodes, then value.
+    check_type(comp_type, comp_id)
+
+    for name, field in (("from_node", from_node), ("to_node", to_node)):
+        if missing(field):
+            raise ValueError(f"{prefix}Missing field: {name}")
+
+    if from_node == to_node:
+        raise ValueError(f"{prefix}A component cannot connect a node to itself ({from_node})")
+
+    if missing(value):
+        raise ValueError(f"{prefix}Missing field: value")
+
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{prefix}Value must be a number, got {value!r}")
+    if not math.isfinite(value):
+        raise ValueError(f"{prefix}Value must be a finite number, got {value!r}")
+    if value <= 0:
+        raise ValueError(f"{prefix}Value must be greater than 0, got {value}")
+
+    return float(value)
+
+def id_sort_key(item_id):
+    """Sort key that orders IDs by their number"""
+    match = re.fullmatch(r"([^\d]*)(\d*)(.*)", str(item_id))
+    letters, number, rest = match.groups()
+    return (letters, int(number) if number else -1, rest)
 
 # Reads a circuit JSON file and returns its contents as a dict (outside the class on purpose).
 def load_from_file(path: str) -> dict:
@@ -30,13 +79,14 @@ class components_loader:
     def format_component(self):
         for comp in self.data.get("components", []):
 
-            comp_type = comp["component_type"]
-            if comp_type not in COMPONENT_TYPES:
-                raise ValueError(f"Unknown component_type '{comp_type}' in {comp['component_id']}")
-
-            if comp["from_node"] == comp["to_node"]:
-                raise ValueError(f"{comp['component_id']} connects node ' {comp['from_node']}' to itself")
-            cls, value_field = COMPONENT_TYPES[comp_type]
+            comp_type = comp.get("component_type")
+            if comp_type == SOURCE_TYPE:
+                raise ValueError(f"{comp.get('component_id')}: put the voltage source in the 'source' field, not in 'components'")
+            value_field = COMPONENT_TYPES[comp_type][1] if comp_type in COMPONENT_TYPES else None
+            # Same rules as the server, so a JSON file can't sneak in bad data either
+            validate_component(comp_type, comp.get("from_node"), comp.get("to_node"),
+                               comp.get(value_field), comp.get("component_id"))
+            cls = COMPONENT_TYPES[comp_type][0]
 
             comp_obj = cls(
                 comp["component_id"],
