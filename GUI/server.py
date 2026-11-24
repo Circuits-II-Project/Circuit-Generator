@@ -5,9 +5,8 @@ import matplotlib
 matplotlib.use('Agg')
 import schemdraw
 import schemdraw.elements as elm
-from flask import Flask, send_from_directory, request, jsonify 
-from node_calculations.validation import check_circuit
- 
+from flask import Flask, send_from_directory, request, jsonify
+
 # single source of truth: circuits as plain data (same shape as the JSON)
 circuit_data = {"components": [], "source": None, "ground": None}
 # Node naming state. next_node only goes up
@@ -17,12 +16,6 @@ counters = {"next_node": 0, "last_node": None}
 current_load = None
 current_analysis = None
 
-#component_type - > schemdraw element used to draw it
-DRAW_ELEMENT = {
-    "resistor": elm.Resistor,
-    "capacitor" : elm.Capacitor,
-    "inductor" : elm.Inductor,
-}
 ID_PREFIX = {"resistor": "R", "capacitor": "C", "inductor": "L"}
 DEFAULT_VALUES = {"resistor": 100, "capacitor": 1e-6, "inductor": 0.01}
 SOURCE_ID = "V1"
@@ -33,6 +26,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, '..'))
 from node_calculations import loader as cl
 from node_calculations import analyzer as al
+from node_calculations.validation import check_circuit
+sys.path.insert(0, HERE)
+import drawing   # needs node_calculations on the path, so it comes after the line above
 
 IMAGE_PATH = os.path.join(HERE, "MyCirc_2.png")
 
@@ -157,34 +153,91 @@ def set_ground(node):
         draft["ground"] = node
     commit(change)
 
+def insert_series(comp_id, comp_type, value):
+    def change(draft, draft_counters):
+        target = next((c for c in draft["components"] if c["component_id"] == comp_id), None)
+        if target is None and draft.get("source") and draft["source"]["source_id"] == comp_id:
+            target = draft["source"]
+        if target is None:
+            raise NotFound(f"There is no component '{comp_id}'")
+        cl.check_type(comp_type)
+        if comp_type == cl.SOURCE_TYPE:
+            raise ValueError("Only one source is allowed, so a source can't be added in series")
+        old_to = target["to_node"]
+        new_node = resolve_node(NEW_NODE, draft_counters)
+        target["to_node"] = new_node
+        clean_value = cl.validate_component(comp_type, new_node, old_to, value)
+        draft["components"].append({
+            "component_id": next_id(draft, comp_type),
+            "component_type": comp_type,
+            "from_node": new_node,
+            "to_node": old_to,
+            cl.COMPONENT_TYPES[comp_type][1]: clean_value,
+        })
+    commit(change)
+
 def check_json():
     problems = check_circuit(circuit_data)
     return {"ok": not problems, "problems": problems}
 
+def calculate_json():
+    # Simple DC solver: only handles one series loop of resistors and the source.
+    problems = check_circuit(circuit_data)
+    if problems:
+        raise ValueError("The circuit is not ready: " + " ".join(problems))
+    parts = circuit_data["components"]
+    if any(c["component_type"] != "resistor" for c in parts):
+        raise ValueError("Calculate only supports resistors for now")
+    if any(len(n.connected_components) != 2 for n in current_load.nodes.values()):
+        raise ValueError("Calculate only supports a single series loop for now (no parallel branches)")
+
+    volts = circuit_data["source"]["source_voltage"]
+    total_r = sum(c["resistance"] for c in parts)
+    current = volts / total_r
+
+    results = {c["component_id"]: {"current": current, "voltage": current * c["resistance"]}
+               for c in parts}
+    results[SOURCE_ID] = {"current": -current, "voltage": volts}
+    return {"components": results, "total_power_delivered": volts * current}
+
+def relation_labels(analysis):
+    info = analysis.to_dict()
+    labels, seen = [], set()
+    for cid, comp in info["components"].items():
+        if comp["parallel"]:
+            group = tuple(sorted([cid, *comp["parallel"]], key=cl.id_sort_key))
+            if group not in seen:
+                seen.add(group)
+                labels.append("Parallel: " + " ∥ ".join(group))
+    for group in info["series_groups"]:
+        labels.append("Series: " + " + ".join(group))
+    return labels
+
 def state_json():
-    #Analyzer does the simple data conversion
     out = current_analysis.to_dict()
-    out["circuit"] = circuit_data    # raw data, so GUI can show values
+    out["circuit"] = circuit_data   
     out["source"] = circuit_data.get("source")
     out["ground"] = circuit_data.get("ground")
     out["last_node"] = counters["last_node"]
-    out["check"] = check_json()      # so the GUI can enable/disable Calculate
+    out["check"] = check_json()      
+    out["labels"] = relation_labels(current_analysis)   
+    out["structure"] = drawing.structure(circuit_data) 
     return out
 
 
 def redraw():
     path = IMAGE_PATH
 
-    if not circuit_data["components"]:
+    #schemdraw crashes saving an empty drawing, so just remove the stale image
+    if not circuit_data["components"] and not circuit_data.get("source"):
         if os.path.exists(path):
             os.remove(path)
         return
-
-    with schemdraw.Drawing(file=path, show=False) as d:
-        for comp in circuit_data["components"]:
-            d += DRAW_ELEMENT[comp["component_type"]]().label(comp["component_id"])
-
-
+    try:
+        drawing.draw_circuit(circuit_data, path)
+    except Exception:
+        # A drawing problem must never block editing; the circuit itself is already saved
+        app.logger.exception("Could not draw the circuit")
 
 
 
@@ -225,6 +278,12 @@ def add(comp_type):
     add_component(comp_type, data.get("from_node"), data.get("to_node"), data.get("value"))
     return jsonify(state_json())
 
+@app.route('/insert_series/<comp_id>', methods=['POST'])
+def insert_series_route(comp_id):
+    data = body()
+    insert_series(comp_id, data.get("type"), data.get("value"))
+    return jsonify(state_json())
+
 @app.route('/ground', methods=['POST'])
 def ground():
     set_ground(body().get("node"))
@@ -246,6 +305,10 @@ def state():
 @app.route('/check', methods=['GET'])
 def check():
     return jsonify(check_json())
+
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    return jsonify(calculate_json())
 
 #Serve the page and the image
 @app.route('/')

@@ -1,35 +1,315 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
+    <meta charset="utf-8">
     <title>Test Display for "live" Images</title>
-    
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 1.5em auto; padding: 0 1em; }
+        h2 { margin: 1.2em 0 0.4em; font-size: 1.1em; }
+        .row { margin: 0.4em 0; }
+        .muted { color: #667; }
+        .error { color: #b00020; }
+        table { border-collapse: collapse; width: 100%; margin-top: 0.5em; }
+        th, td { border: 1px solid #ccd; padding: 4px 8px; text-align: left; }
+        button { border-radius: 5px; margin-right: 4px; cursor: pointer; }
+        button.on { background: #cfe0f7; border-color: #3a6db5; font-weight: bold; }
+        button:disabled { cursor: not-allowed; }
+        #circuit { max-width: 100%; }
+    </style>
 </head>
 
 <body>
-    <h1>
-        "live" image updating
-    </h1>
-        <img id="circuit" src="MyCirc_2.png" alt="No circuit yet - click a button">
+    <h1>"live" image updating</h1>
+    <img id="circuit" src="MyCirc_2.png" alt="No circuit yet - add a part"
+         onerror="this.style.visibility='hidden'" onload="this.style.visibility='visible'">
+    <div id="error" class="row error"></div>
 
-    <button onclick="add_resistor()" style="border-radius: 5px;">Resistor</button>
-    <button onclick="add_capacitor()" style="border-radius: 5px;">Capacitor</button>
-    <button onclick="add_inductor()" style="border-radius: 5px;">Inductor</button>
+    <h2>1. Choose a part</h2>
+    <div class="row" id="type-buttons"></div>
+    <div class="row">
+        Value: <input id="value" size="10" oninput="onValueInput()">
+        <span id="unit" class="muted"></span>
+        <span class="muted">(you can use k, M, m, u, n, p, e.g. 4.7k or 10u)</span>
+    </div>
+
+    <h2>2. Add it to the circuit</h2>
+    <div class="row">
+        From: <select id="from-node"></select>
+        To: <select id="to-node"></select>
+        <button id="add-btn" onclick="addPlain()" disabled>Add part</button>
+        <button onclick="resetAll()">Reset circuit</button>
+    </div>
+
+    <h2>3. Parts in the circuit</h2>
+    <div class="row">
+        Selected: <strong id="selected-text">none</strong>
+        <button id="add-series" onclick="addSeries()" disabled>Add in series</button>
+        <button id="add-parallel" onclick="addParallel()" disabled>Add in parallel</button>
+        <span id="plan-b-hint" class="muted"></span>
+    </div>
+    <div class="row">Structure: <strong id="structure">-</strong></div>
+    <div class="row">Relations: <span id="labels" class="muted">-</span></div>
+    <table>
+        <thead><tr><th></th><th>ID</th><th>Type</th><th>From</th><th>To</th><th>Value</th><th>Series / parallel with</th><th></th></tr></thead>
+        <tbody id="parts"></tbody>
+    </table>
+
+    <h2>4. Ground and check</h2>
+    <div class="row">
+        Ground: <select id="ground-node"></select>
+        <button onclick="setGround()">Set ground</button>
+        <span id="ground-text" class="muted"></span>
+    </div>
+    <div class="row" id="check"></div>
 
     <script>
-        async function addPart(route){
-            //Tells python to run the function 
-            await fetch(route, {method: 'POST'});
-            //reload the image; the ?t= stops the browser from showing the old cached copy
-            document.getElementById('circuit').src = 'MyCirc_2.png?t=' + Date.now();
+        // ---------- constants ----------
+        const TYPES = ["source", "resistor", "capacitor", "inductor"];
+        const TYPE_LABEL = {source: "Source", resistor: "Resistor", capacitor: "Capacitor", inductor: "Inductor"};
+        const UNIT = {source: "V", resistor: "Ω", capacitor: "F", inductor: "H"};
+        const DEFAULT_VALUE = {source: 10, resistor: 100, capacitor: 1e-6, inductor: 0.01};
+        const NEW_NODE = "new";
+
+        // ---------- state ----------
+        let S = null;                                   // last state from the server
+        let draft = {type: null, value: null};          // step 1 choice
+
+        // ---------- helpers ----------
+        function fmt(value, unit) {
+            if (value === null || value === undefined) return "";
+            if (value === 0) return "0 " + unit;
+            const steps = [[1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"], [1e-12, "p"]];
+            const abs = Math.abs(value);
+            const [scale, prefix] = steps.find(s => abs >= s[0]) || steps[steps.length - 1];
+            return +(value / scale).toPrecision(4) + " " + prefix + unit;
         }
-        function add_resistor() {addPart('/add_resistor'); }
-        function add_capacitor() {addPart('/add_capacitor'); }
-        function add_inductor() {addPart('/add_inductor'); }
 
+        function parseValue(text) {
+            const m = String(text).trim().match(/^([0-9]*\.?[0-9]+(?:e[+-]?\d+)?)\s*([kMmunp]?)$/i);
+            if (!m) return null;
+            const mult = {k: 1e3, M: 1e6, m: 1e-3, u: 1e-6, n: 1e-9, p: 1e-12, "": 1};
+            // "M" is mega, "m" is milli; the other letters are case-insensitive
+            const key = m[2] === "M" || m[2] === "m" ? m[2] : m[2].toLowerCase();
+            return Number(m[1]) * mult[key];
+        }
+
+        function isValid(v) { return typeof v === "number" && Number.isFinite(v) && v > 0; }
+
+        function button(text, onclick, opts = {}) {
+            const b = document.createElement("button");
+            b.textContent = text;
+            b.onclick = onclick;
+            if (opts.on) b.classList.add("on");
+            return b;
+        }
+
+        function showError(msg) { document.getElementById("error").textContent = msg || ""; }
+
+        // Flat list of parts (components plus the source) with one "value" each
+        function partsList() {
+            if (!S || !S.circuit) return [];
+            const out = [];
+            if (S.source) {
+                out.push({id: S.source.source_id, type: "source", from: S.source.from_node,
+                          to: S.source.to_node, value: S.source.source_voltage});
+            }
+            const skip = new Set(["component_id", "component_type", "from_node", "to_node"]);
+            for (const c of S.circuit.components) {
+                // the value field name depends on the type, so take the one that is left over
+                const field = Object.keys(c).find(k => !skip.has(k));
+                out.push({id: c.component_id, type: c.component_type, from: c.from_node,
+                          to: c.to_node, value: c[field]});
+            }
+            return out;
+        }
+
+        function nodeList() {
+            const set = new Set();
+            for (const p of partsList()) { set.add(p.from); set.add(p.to); }
+            return [...set].sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+        }
+
+        // ---------- talking to the server ----------
+        async function change(method, route, payload) {
+            try {
+                const res = await fetch(route, {
+                    method,
+                    headers: {"Content-Type": "application/json"},
+                    body: payload ? JSON.stringify(payload) : undefined,
+                });
+                const data = await res.json();
+                if (!res.ok) { showError(data.error || "Request failed"); return; }
+                showError("");
+                S = data;
+                // the ?t= stops the browser from showing the old cached copy
+                document.getElementById("circuit").src = "MyCirc_2.png?t=" + Date.now();
+                render();
+            } catch (err) {
+                showError("Could not reach the server: " + err.message);
+            }
+        }
+
+        async function loadState() {
+            const res = await fetch("/state");
+            S = await res.json();
+            render();
+        }
+
+        // ---------- step 1 and 2: choose and add ----------
+        function renderTypeButtons() {
+            const box = document.getElementById("type-buttons");
+            box.replaceChildren(...TYPES.map(t =>
+                button(TYPE_LABEL[t], () => pickType(t), {on: draft.type === t})));
+            document.getElementById("unit").textContent = draft.type ? UNIT[draft.type] : "";
+        }
+
+        function pickType(t) {
+            draft.type = t;
+            if (!isValid(draft.value)) {
+                draft.value = DEFAULT_VALUE[t];
+                document.getElementById("value").value = draft.value;
+            }
+            render();
+        }
+
+        function onValueInput() {
+            draft.value = parseValue(document.getElementById("value").value);
+            render();
+        }
+
+        function fillNodeSelect(id, withNew, keep) {
+            const sel = document.getElementById(id);
+            const options = (withNew ? [NEW_NODE] : []).concat(nodeList());
+            const prev = sel.value;
+            sel.replaceChildren(...options.map(n => {
+                const o = document.createElement("option");
+                o.value = n;
+                o.textContent = n === NEW_NODE ? "(new node)" : n;
+                return o;
+            }));
+            if (options.includes(prev)) sel.value = prev;
+            else if (keep && options.includes(keep)) sel.value = keep;
+        }
+
+        async function addPlain() {
+            // Defaults from the server: start at the last node, end at a new one
+            const from = document.getElementById("from-node").value;
+            const to = document.getElementById("to-node").value;
+            await change("POST", "/add/" + draft.type, {from_node: from, to_node: to, value: draft.value});
+        }
+
+        async function resetAll() {
+            selected = null;
+            await change("POST", "/reset");
+        }
+
+        // ---------- step 4: ground and check ----------
+        async function setGround() {
+            const node = document.getElementById("ground-node").value;
+            if (node) await change("POST", "/ground", {node});
+        }
+
+        function renderCheck() {
+            const box = document.getElementById("check");
+            const check = S && S.check;
+            if (!check) { box.textContent = ""; return; }
+            box.textContent = "";
+            const status = document.createElement("strong");
+            status.textContent = check.ok ? "Circuit is ready to calculate" : "Not ready yet";
+            box.appendChild(status);
+            if (!check.ok) {
+                const ul = document.createElement("ul");
+                for (const p of check.problems) {
+                    const li = document.createElement("li");
+                    li.textContent = typeof p === "string" ? p : JSON.stringify(p);
+                    ul.appendChild(li);
+                }
+                box.appendChild(ul);
+            }
+            fillNodeSelect("ground-node", false, S.ground);
+            document.getElementById("ground-text").textContent =
+                S.ground ? "Current ground: " + S.ground : "No ground set";
+        }
+
+        // ---------- Plan B: select a part, then add in series / parallel ----------
+        let selected = null;
+
+        function selectPart(id) { selected = (selected === id) ? null : id; render(); }
+
+        function selectedPart() { return partsList().find(p => p.id === selected) || null; }
+
+        async function addParallel() {
+            // Same two nodes as the selected part, normal /add route
+            const p = selectedPart();
+            await change("POST", "/add/" + draft.type, {from_node: p.from, to_node: p.to, value: draft.value});
+        }
+
+        async function addSeries() {
+            // New node between the selected part and its To node (one server transaction)
+            await change("POST", "/insert_series/" + encodeURIComponent(selected),
+                         {type: draft.type, value: draft.value});
+        }
+
+        async function removePart(id) {
+            await change("POST", "/remove/" + encodeURIComponent(id));
+        }
+
+        function renderParts() {
+            if (selected && !selectedPart()) selected = null;      // it was removed
+            const body = document.getElementById("parts");
+            const rows = partsList().map(p => {
+                const tr = document.createElement("tr");
+                if (p.id === selected) tr.style.background = "#e2ecf8";
+                const pick = document.createElement("td");
+                pick.appendChild(button(p.id === selected ? "Selected" : "Select", () => selectPart(p.id),
+                                        {on: p.id === selected}));
+                tr.appendChild(pick);
+                const comps = (S && S.components) || {};
+                const tags = comps[p.id] || {series: [], parallel: []};
+                const relations = [...tags.parallel.map(x => "∥ " + x), ...tags.series.map(x => "+ " + x)].join(", ");
+                for (const text of [p.id, TYPE_LABEL[p.type], p.from, p.to, fmt(p.value, UNIT[p.type]), relations]) {
+                    const td = document.createElement("td");
+                    td.textContent = text;
+                    tr.appendChild(td);
+                }
+                const td = document.createElement("td");
+                td.appendChild(button("Remove", () => removePart(p.id)));
+                tr.appendChild(td);
+                return tr;
+            });
+            if (!rows.length) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = '<td colspan="8" class="muted">Nothing yet</td>';
+                rows.push(tr);
+            }
+            body.replaceChildren(...rows);
+
+            document.getElementById("structure").textContent =
+                S && S.structure ? S.structure : "- (needs a source; bridges have no series/parallel form)";
+            document.getElementById("labels").textContent = S && S.labels && S.labels.length ? S.labels.join("   |   ") : "-";
+
+            // Plan B buttons need a selected part plus a type and value from step 1
+            const p = selectedPart();
+            document.getElementById("selected-text").textContent = p ? p.id + " (" + p.from + " → " + p.to + ")" : "none";
+            const ready = p && draft.type && draft.type !== "source" && isValid(draft.value);
+            document.getElementById("add-series").disabled = !ready;
+            document.getElementById("add-parallel").disabled = !ready;
+            document.getElementById("plan-b-hint").textContent = !p ? "Select a part below"
+                : ready ? "adds a " + TYPE_LABEL[draft.type] + " of " + fmt(draft.value, UNIT[draft.type])
+                : "Pick a type (not Source) and a value in step 1";
+        }
+
+        // ---------- one render for everything ----------
+        function render() {
+            renderTypeButtons();
+            fillNodeSelect("from-node", true, S && S.last_node);
+            fillNodeSelect("to-node", true);
+            document.getElementById("add-btn").disabled = !(draft.type && isValid(draft.value));
+            renderParts();
+            renderCheck();
+        }
+
+        loadState();
     </script>
-
 </body>
-
 </html>
