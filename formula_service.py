@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+from __future__ import annotations
+
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "AC & DC Functions"))
+
 from AC_behavior_test import (
     calc_capacitive_reactance,
     calc_impedance,
