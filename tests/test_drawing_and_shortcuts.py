@@ -6,10 +6,9 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, ".."))
-sys.path.append(os.path.join(HERE, "..", "GUI"))
 
-import server
-import drawing
+from core import formula_service
+from web import drawing, server
 
 
 def R(cid, a, b, ohms=100.0):
@@ -197,8 +196,6 @@ class PlanBTests(unittest.TestCase):
 class SuiteImportTests(unittest.TestCase):
 
     def test_formula_service_imports(self):
-        sys.path.append(os.path.join(HERE, ".."))
-        import formula_service  
         self.assertTrue(hasattr(formula_service, "calc_impedance"))
 
 

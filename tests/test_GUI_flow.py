@@ -6,11 +6,10 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, ".."))
-sys.path.append(os.path.join(HERE, "..", "GUI"))
 
-import server
+from web import server
 
-PAGE = os.path.join(HERE, "..", "GUI", "display.html")
+PAGE = os.path.join(HERE, "..", "web", "display.html")
 
 
 class GuiFlowTests(unittest.TestCase):
@@ -64,7 +63,7 @@ class GuiFlowTests(unittest.TestCase):
         self.add("resistor", "N1", "N2", 300)       # R3 N1-N2
         self.add("source", "N0", "N2", 12)
         state = self.ground("N2")
-        self.assertIn("R2 ∥ R3", state["labels"])
+        self.assertIn("Parallel: R2 ∥ R3", state["labels"])
         out = self.calculate()
         self.assertAlmostEqual(out["components"]["R1"]["current"], 12 / 220)
 

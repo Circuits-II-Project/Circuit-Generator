@@ -1,5 +1,5 @@
-from . import loader as cl
-from . import analyzer as al
+from core import loader as cl
+from core import analyzer as al
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))

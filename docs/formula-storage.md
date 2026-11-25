@@ -9,7 +9,7 @@ cálculos de fórmulas aisladas; no guarda un circuito completo.
 En PowerShell, desde la raíz de Circuit Generator:
 
 ```powershell
-.\.venv\Scripts\python.exe formula_input_test.py
+.\.venv\Scripts\python.exe -m tests.formula_input_test
 ```
 
 El programa muestra las 18 opciones disponibles. Tras mostrar un resultado

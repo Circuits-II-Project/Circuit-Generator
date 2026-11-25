@@ -9,3 +9,5 @@ matplotlib==3.11.2
 flask>=3.0
 # Testing
 pytest>=9.0
+# DC circuit solver (web/server.py)
+numpy>=1.26

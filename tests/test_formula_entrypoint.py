@@ -13,7 +13,9 @@ class FormulaEntrypointTests(unittest.TestCase):
             [
                 sys.executable,
                 "-c",
-                "import formula_service; import formula_cli; import formula_input_test",
+                "import core.formula_service; "
+                "import cli.formula_cli; "
+                "import tests.formula_input_test",
             ],
             cwd=ROOT,
             capture_output=True,
@@ -26,7 +28,7 @@ class FormulaEntrypointTests(unittest.TestCase):
 
     def test_existing_entrypoint_runs_formula_cli(self) -> None:
         result = subprocess.run(
-            [sys.executable, "formula_input_test.py"],
+            [sys.executable, "-m", "tests.formula_input_test"],
             cwd=ROOT,
             input="17\n0.1\n10\n",
             capture_output=True,

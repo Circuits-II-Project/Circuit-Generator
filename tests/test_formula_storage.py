@@ -6,8 +6,12 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from formula_service import FORMULAS, calculate_formula
-from formula_storage import StorageFormatError, append_calculation, load_calculations
+from core.formula_service import FORMULAS, calculate_formula
+from core.formula_storage import (
+    StorageFormatError,
+    append_calculation,
+    load_calculations,
+)
 
 
 class FormulaStorageTests(unittest.TestCase):
@@ -189,7 +193,7 @@ class FormulaStorageTests(unittest.TestCase):
         self.append_service_calculation("1", {"current": 1.0, "resistance": 2.0})
         before = self.storage_path.read_bytes()
 
-        with patch("formula_storage.os.replace", side_effect=OSError("disk failure")):
+        with patch("core.formula_storage.os.replace", side_effect=OSError("disk failure")):
             with self.assertRaises(OSError):
                 self.append_service_calculation(
                     "17",

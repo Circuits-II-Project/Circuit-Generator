@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from input_validation import validate_circuit
+from core.input_validation import validate_circuit
 
 
 # Este archivo no resuelve ni guarda el circuito. Solo arma el diccionario que

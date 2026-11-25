@@ -4,19 +4,14 @@ from __future__ import annotations
 
 from __future__ import annotations
 
-import os
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "AC & DC Functions"))
-
-from AC_behavior_test import (
+from core.ac_formulas import (
     calc_capacitive_reactance,
     calc_impedance,
     calc_inductive_reactance,
     pol_to_rec,
     rec_to_pol,
 )
-from DC_behavior_test import (
+from core.dc_formulas import (
     calculate_capacitor_current,
     calculate_capacitor_power,
     calculate_eqc_parallel,
@@ -31,7 +26,7 @@ from DC_behavior_test import (
     calculate_resistor_power,
     calculate_resistor_voltage,
 )
-from input_validation import is_valid_number
+from .input_validation import is_valid_number
 
 
 Field = tuple[str, str]
