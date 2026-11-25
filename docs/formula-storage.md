@@ -118,10 +118,10 @@ El almacenamiento admite `diagram_path` como una referencia relativa y rechaza
 rutas absolutas. Sin embargo, todavía no define desde qué carpeta se resuelve
 esa ruta.
 
-Actualmente el CLI siempre guarda `diagram_path` como `null`. La asociación de
-un diagrama con un cálculo y la base de resolución de la ruta deben acordarse
-con el flujo de diagramas de Nancy. No se debe asociar una imagen de ejemplo a
-un cálculo sin evidencia de que representa el mismo circuito.
+Actualmente el CLI siempre guarda `diagram_path` como `null`. El guardado de
+circuitos completos con diagrama se realiza en una colección separada de la
+GUI; véase `docs/circuit-image-storage.md`. No se debe asociar una imagen de
+ejemplo a un cálculo de fórmula aislado.
 
 ## Limitación actual
 

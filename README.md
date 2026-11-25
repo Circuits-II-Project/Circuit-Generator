@@ -1,2 +1,5 @@
-# Phase-1---Testing
-Here we will have the basic files for the program, only testing, nothing too complicated.
+# Circuit Generator
+
+La GUI guarda circuitos completos e imágenes en archivos locales ignorados por
+Git. Consulta [docs/circuit-image-storage.md](docs/circuit-image-storage.md)
+para el formato, la base de las rutas relativas y las limitaciones actuales.

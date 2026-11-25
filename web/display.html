@@ -84,6 +84,8 @@
         <h2>4. Calculate</h2>
         <ul id="problems"></ul>
         <button id="calculate" onclick="calculate()">Calculate</button>
+        <button id="save-circuit" onclick="saveCircuit()">Save circuit and image</button>
+        <span id="save-status" class="muted"></span>
         <div id="results"></div>
     </section>
 
@@ -253,6 +255,13 @@
             const data = await api("POST", "/calculate");
             if (data) renderResults(data);
         }
+        async function saveCircuit() {
+            const data = await api("POST", "/save");
+            if (data) {
+                document.getElementById("save-status").textContent =
+                    "Saved image: " + data.diagram_path;
+            }
+        }
 
         // ---------- Rendering ----------
         function partsList() {
@@ -353,6 +362,8 @@
             }));
             // Disabled while /check reports problems
             document.getElementById("calculate").disabled = !(S && S.check.ok);
+            document.getElementById("save-circuit").disabled = !(S && S.check.ok);
+            if (!S || !S.check.ok) document.getElementById("save-status").textContent = "";
         }
 
         function render() {

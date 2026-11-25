@@ -26,9 +26,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 from core import loader as cl
 from core import analyzer as al
 from core.validation import check_circuit
+from core.circuit_storage import circuit_identity, save_circuit
 from . import drawing
 
 IMAGE_PATH = os.path.join(HERE, "static", "MyCirc_2.png")
+# Saved image references are relative to this collection's directory.
+CIRCUIT_STORAGE_PATH = os.path.join(HERE, "saved_circuits.json")
+current_diagram_circuit_id = None
 
 schemdraw.use('matplotlib')
 
@@ -57,11 +61,12 @@ def commit(change):
 
 def reset_state(draw=True):
     #Back to an empty circuit
-    global circuit_data, counters, current_load, current_analysis
+    global circuit_data, counters, current_load, current_analysis, current_diagram_circuit_id
     circuit_data = {"components": [], "source": None, "ground": None}
     counters = {"next_node": 0, "last_node": None}
     current_load = cl.components_loader(circuit_data)
     current_analysis = al.connection_analyzer(current_load)
+    current_diagram_circuit_id = None
     if draw:
         redraw()
 
@@ -264,18 +269,42 @@ def state_json():
 
 
 def redraw():
+    global current_diagram_circuit_id
     path = IMAGE_PATH
 
     #schemdraw crashes saving an empty drawing, so just remove the stale image
     if not circuit_data["components"] and not circuit_data.get("source"):
         if os.path.exists(path):
             os.remove(path)
+        current_diagram_circuit_id = None
         return
     try:
         drawing.draw_circuit(circuit_data, path)
+        # This is set only after drawing succeeds, so saving cannot associate a
+        # stale working image with newer circuit data.
+        current_diagram_circuit_id = circuit_identity(circuit_data)
     except Exception:
+        current_diagram_circuit_id = None
+        if os.path.exists(path):
+            os.remove(path)
         # A drawing problem must never block editing; the circuit itself is already saved
         app.logger.exception("Could not draw the circuit")
+
+
+def save_current_circuit() -> dict:
+    """Persist the current complete circuit with the diagram generated for it."""
+    problems = check_circuit(circuit_data)
+    if problems:
+        raise ValueError("The circuit is not ready: " + " ".join(problems))
+
+    snapshot = copy.deepcopy(circuit_data)
+    if current_diagram_circuit_id != circuit_identity(snapshot):
+        raise ValueError(
+            "No current diagram is available. Add or change a circuit part to generate it first."
+        )
+    # calculate_json uses the same committed circuit_data as the snapshot above;
+    # validation prevents saving a partial circuit without real results.
+    return save_circuit(CIRCUIT_STORAGE_PATH, snapshot, calculate_json(), IMAGE_PATH)
 
 
 
@@ -353,6 +382,13 @@ def calculate():
             "problems": problems
         }), 400
     return jsonify(calculate_json())
+
+
+@app.route('/save', methods=['POST'])
+def save():
+    record = save_current_circuit()
+    return jsonify({"saved": True, "circuit_id": record["circuit_id"],
+                    "diagram_path": record["diagram_path"]}), 201
 
 #Serve the page and the image
 @app.route('/')
