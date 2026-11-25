@@ -5,8 +5,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from formula_cli import main
-from formula_storage import load_calculations
+from cli.formula_cli import main
+from core.formula_storage import load_calculations
 
 
 class FormulaCliStorageTests(unittest.TestCase):
@@ -71,8 +71,8 @@ class FormulaCliStorageTests(unittest.TestCase):
 
     def test_failed_calculation_does_not_offer_saving(self) -> None:
         with (
-            patch("formula_cli.calculate_formula", side_effect=ZeroDivisionError("zero")),
-            patch("formula_cli.should_save_calculation") as save_prompt,
+            patch("cli.formula_cli.calculate_formula", side_effect=ZeroDivisionError("zero")),
+            patch("cli.formula_cli.should_save_calculation") as save_prompt,
         ):
             output = self.run_cli(["1", "1", "2"])
 

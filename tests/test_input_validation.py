@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import unittest
 
-from input_validation import (
+from core.input_validation import (
     is_valid_number,
     validate_circuit,
     validate_components,

@@ -1,5 +1,6 @@
-import os, sys
+import os
 import copy
+import numpy as np
 import re
 import matplotlib
 matplotlib.use('Agg')
@@ -21,16 +22,13 @@ DEFAULT_VALUES = {"resistor": 100, "capacitor": 1e-6, "inductor": 0.01}
 SOURCE_ID = "V1"
 NEW_NODE = "new"   # from_node / to_node value
 
-# The path must be added BEFORE importing loader/analyzer, otherwise Python can't find them
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(HERE, '..'))
-from node_calculations import loader as cl
-from node_calculations import analyzer as al
-from node_calculations.validation import check_circuit
-sys.path.insert(0, HERE)
-import drawing   # needs node_calculations on the path, so it comes after the line above
+from core import loader as cl
+from core import analyzer as al
+from core.validation import check_circuit
+from . import drawing
 
-IMAGE_PATH = os.path.join(HERE, "MyCirc_2.png")
+IMAGE_PATH = os.path.join(HERE, "static", "MyCirc_2.png")
 
 schemdraw.use('matplotlib')
 
@@ -181,24 +179,64 @@ def check_json():
     return {"ok": not problems, "problems": problems}
 
 def calculate_json():
-    # Simple DC solver: only handles one series loop of resistors and the source.
+    # DC solver (nodal analysis): any resistor network with one source and a ground.
     problems = check_circuit(circuit_data)
     if problems:
         raise ValueError("The circuit is not ready: " + " ".join(problems))
     parts = circuit_data["components"]
     if any(c["component_type"] != "resistor" for c in parts):
         raise ValueError("Calculate only supports resistors for now")
-    if any(len(n.connected_components) != 2 for n in current_load.nodes.values()):
-        raise ValueError("Calculate only supports a single series loop for now (no parallel branches)")
 
-    volts = circuit_data["source"]["source_voltage"]
-    total_r = sum(c["resistance"] for c in parts)
-    current = volts / total_r
+    src = circuit_data["source"]
+    ground = circuit_data["ground"]
+    nodes = sorted({n for c in parts for n in (c["from_node"], c["to_node"])}
+                   | {src["from_node"], src["to_node"]}, key=cl.id_sort_key)
+    unknown = [n for n in nodes if n != ground]
+    idx = {n: i for i, n in enumerate(unknown)}
+    k = len(unknown)                      # extra unknown: current through the source
+    A = np.zeros((k + 1, k + 1))
+    z = np.zeros(k + 1)
 
-    results = {c["component_id"]: {"current": current, "voltage": current * c["resistance"]}
-               for c in parts}
-    results[SOURCE_ID] = {"current": -current, "voltage": volts}
-    return {"components": results, "total_power_delivered": volts * current}
+    for c in parts:                       # resistor stamps, conductance g = 1/R
+        g = 1.0 / c["resistance"]
+        a, b = c["from_node"], c["to_node"]
+        if a in idx: A[idx[a], idx[a]] += g
+        if b in idx: A[idx[b], idx[b]] += g
+        if a in idx and b in idx:
+            A[idx[a], idx[b]] -= g
+            A[idx[b], idx[a]] -= g
+
+    p, n = src["from_node"], src["to_node"]   # source: V(p) - V(n) = volts
+    if p in idx:
+        A[idx[p], k] += 1
+        A[k, idx[p]] += 1
+    if n in idx:
+        A[idx[n], k] -= 1
+        A[k, idx[n]] -= 1
+    z[k] = src["source_voltage"]
+
+    try:
+        sol = np.linalg.solve(A, z)
+    except np.linalg.LinAlgError:
+        raise ValueError("The circuit can't be solved (check for floating parts)")
+
+    volt = {n_: 0.0 for n_ in nodes}
+    for n_, i in idx.items():
+        volt[n_] = float(sol[i])
+
+    results = {}
+    for c in parts:
+        v = volt[c["from_node"]] - volt[c["to_node"]]
+        i = v / c["resistance"]
+        results[c["component_id"]] = {"voltage": v, "current": i, "power": v * i}
+    v_src = volt[p] - volt[n]
+    i_src = float(sol[k])                 # From -> To through the source (negative = delivering)
+    results[SOURCE_ID] = {"voltage": v_src, "current": i_src, "power": v_src * i_src}
+
+    absorbed = sum(r["power"] for cid, r in results.items() if cid != SOURCE_ID)
+    return {"ground": ground, "node_voltages": volt, "components": results,
+            "total_power_delivered": -results[SOURCE_ID]["power"],
+            "total_power_absorbed": absorbed}
 
 def relation_labels(analysis):
     info = analysis.to_dict()
@@ -308,6 +346,12 @@ def check():
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
+    problems = check_circuit(circuit_data)
+    if problems:
+        return jsonify({
+            "error": "The circuit is not ready: " + " ".join(problems),
+            "problems": problems
+        }), 400
     return jsonify(calculate_json())
 
 #Serve the page and the image
@@ -317,7 +361,7 @@ def page():
 
 @app.route('/MyCirc_2.png')
 def image():
-    return send_from_directory(HERE, 'MyCirc_2.png')
+    return send_from_directory(os.path.join(HERE, "static"), 'MyCirc_2.png')
 
 
 # Start empty. No redraw here, so importing the server (tests) never touches the image

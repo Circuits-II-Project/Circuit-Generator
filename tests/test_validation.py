@@ -5,10 +5,9 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, ".."))
-sys.path.append(os.path.join(HERE, "..", "GUI"))
 
-from node_calculations.validation import check_circuit
-import server
+from core.validation import check_circuit
+from web import server
 
 
 def resistor(rid, a, b, r=100.0):

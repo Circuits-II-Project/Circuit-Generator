@@ -5,10 +5,9 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE,".."))
-sys.path.append(os.path.join(HERE, "..", "GUI")) 
 
-from node_calculations import loader as cl
-import server
+from core import loader as cl
+from web import server
 
 def resistor(rid, a, b, r=100.0):
     return {"component_id": rid, "component_type": "resistor",

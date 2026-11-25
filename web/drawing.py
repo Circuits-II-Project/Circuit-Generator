@@ -4,7 +4,7 @@ import math
 import schemdraw
 import schemdraw.elements as elm 
 
-from node_calculations.loader import COMPONENT_TYPES, id_sort_key
+from core.loader import COMPONENT_TYPES, id_sort_key
 
 ELEMENT = {"resistor": elm.Resistor, "capacitor": elm.Capacitor, "inductor": elm.Inductor}
 UNIT = {"resistor": "Ω", "capacitor": "F", "inductor": "H", "source": "V"}

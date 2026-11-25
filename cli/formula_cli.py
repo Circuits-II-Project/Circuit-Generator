@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from formula_service import (
+from core.formula_service import (
     FORMULAS,
     Formula,
     calculate_formula,
@@ -13,7 +13,7 @@ from formula_service import (
     parse_finite_number,
     parse_positive_list,
 )
-from formula_storage import StorageFormatError, append_calculation
+from core.formula_storage import StorageFormatError, append_calculation
 
 
 def show_formula_menu() -> None:
