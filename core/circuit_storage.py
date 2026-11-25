@@ -68,15 +68,18 @@ def save_circuit(
         "diagram_path": relative_image_path,
     }
 
+    copied_image = False
     try:
         _copy_image_exclusively(image_source, image_destination)
+        copied_image = True
         collection["circuits"].append(record)
         _write_collection(collection_path, collection)
     except Exception:
-        try:
-            image_destination.unlink()
-        except FileNotFoundError:
-            pass
+        if copied_image:
+            try:
+                image_destination.unlink()
+            except FileNotFoundError:
+                pass
         raise
     return _json_copy(record)
 
@@ -158,16 +161,19 @@ def _validate_source_image(source: Path) -> Path:
 
 def _copy_image_exclusively(source: Path, destination: Path) -> None:
     """Copy without ever replacing an existing saved image."""
+    created_destination = False
     try:
         with source.open("rb") as source_file, destination.open("xb") as target_file:
+            created_destination = True
             shutil.copyfileobj(source_file, target_file)
             target_file.flush()
             os.fsync(target_file.fileno())
     except Exception:
-        try:
-            destination.unlink()
-        except FileNotFoundError:
-            pass
+        if created_destination:
+            try:
+                destination.unlink()
+            except FileNotFoundError:
+                pass
         raise
 
 

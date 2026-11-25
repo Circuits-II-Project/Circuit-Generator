@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from core.circuit_storage import (
     CircuitStorageError,
@@ -76,6 +77,18 @@ class CircuitStorageTests(unittest.TestCase):
         self.assertNotEqual(first["diagram_path"], second["diagram_path"])
         self.assertTrue(resolve_diagram_path(self.storage, first).exists())
         self.assertTrue(resolve_diagram_path(self.storage, second).exists())
+
+    def test_filename_collision_never_replaces_an_existing_saved_image(self) -> None:
+        fixed_uuid = SimpleNamespace(hex="fixed")
+        with patch("core.circuit_storage.uuid.uuid4", return_value=fixed_uuid):
+            first = self.save()
+            first_image = resolve_diagram_path(self.storage, first)
+            before = self.storage.read_bytes()
+            with self.assertRaises(FileExistsError):
+                self.save()
+
+        self.assertEqual(first_image.read_bytes(), PNG_A)
+        self.assertEqual(self.storage.read_bytes(), before)
 
     def test_relative_paths_are_resolved_from_the_collection_directory(self) -> None:
         record = self.save()
