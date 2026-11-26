@@ -203,6 +203,10 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# User-created circuit persistence (relative image paths resolve from this JSON file)
+web/saved_circuits.json
+web/saved_circuit_images/
+
 # Ruff stuff:
 .ruff_cache/
 

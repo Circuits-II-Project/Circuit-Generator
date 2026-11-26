@@ -26,9 +26,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 from core import loader as cl
 from core import analyzer as al
 from core.validation import check_circuit
+from core.circuit_storage import (
+    circuit_identity,
+    get_circuit,
+    list_circuits,
+    resolve_diagram_path,
+    save_circuit,
+    update_circuit,
+)
 from . import drawing
 
 IMAGE_PATH = os.path.join(HERE, "static", "MyCirc_2.png")
+# Saved image references are relative to this collection's directory.
+CIRCUIT_STORAGE_PATH = os.path.join(HERE, "saved_circuits.json")
+current_diagram_circuit_id = None
+# ``None`` means edits belong to an unsaved/new circuit. Loading or saving a
+# document selects it so that a later PUT updates that exact record.
+current_record_id = None
 
 schemdraw.use('matplotlib')
 
@@ -57,11 +71,13 @@ def commit(change):
 
 def reset_state(draw=True):
     #Back to an empty circuit
-    global circuit_data, counters, current_load, current_analysis
+    global circuit_data, counters, current_load, current_analysis, current_diagram_circuit_id, current_record_id
     circuit_data = {"components": [], "source": None, "ground": None}
     counters = {"next_node": 0, "last_node": None}
     current_load = cl.components_loader(circuit_data)
     current_analysis = al.connection_analyzer(current_load)
+    current_diagram_circuit_id = None
+    current_record_id = None
     if draw:
         redraw()
 
@@ -260,22 +276,92 @@ def state_json():
     out["check"] = check_json()      
     out["labels"] = relation_labels(current_analysis)   
     out["structure"] = drawing.structure(circuit_data) 
+    out["loaded_record_id"] = current_record_id
     return out
 
 
 def redraw():
+    global current_diagram_circuit_id
     path = IMAGE_PATH
 
     #schemdraw crashes saving an empty drawing, so just remove the stale image
     if not circuit_data["components"] and not circuit_data.get("source"):
         if os.path.exists(path):
             os.remove(path)
+        current_diagram_circuit_id = None
         return
     try:
         drawing.draw_circuit(circuit_data, path)
+        # This is set only after drawing succeeds, so saving cannot associate a
+        # stale working image with newer circuit data.
+        current_diagram_circuit_id = circuit_identity(circuit_data)
     except Exception:
+        current_diagram_circuit_id = None
+        if os.path.exists(path):
+            os.remove(path)
         # A drawing problem must never block editing; the circuit itself is already saved
         app.logger.exception("Could not draw the circuit")
+
+
+def _ready_circuit_snapshot() -> tuple[dict, dict]:
+    """Return the editable circuit and fresh results only when both are valid."""
+    problems = check_circuit(circuit_data)
+    if problems:
+        raise ValueError("The circuit is not ready: " + " ".join(problems))
+
+    snapshot = copy.deepcopy(circuit_data)
+    if current_diagram_circuit_id != circuit_identity(snapshot):
+        raise ValueError(
+            "No current diagram is available. Add or change a circuit part to generate it first."
+        )
+    # calculate_json uses the same committed circuit_data as the snapshot above;
+    # validation prevents saving a partial circuit without real results.
+    return snapshot, calculate_json()
+
+
+def save_current_circuit(circuit_name: str) -> dict:
+    """Save the current circuit as a new named document."""
+    global current_record_id
+    snapshot, results = _ready_circuit_snapshot()
+    record = save_circuit(
+        CIRCUIT_STORAGE_PATH, circuit_name, snapshot, results, IMAGE_PATH, counters
+    )
+    current_record_id = record["record_id"]
+    return record
+
+
+def update_current_circuit(record_id: str, circuit_name: str | None = None) -> dict:
+    """Update the loaded document without creating another record."""
+    global current_record_id
+    if record_id != current_record_id:
+        raise ValueError("Load the circuit before updating it.")
+    snapshot, results = _ready_circuit_snapshot()
+    record = update_circuit(
+        CIRCUIT_STORAGE_PATH, record_id, snapshot, results, IMAGE_PATH,
+        counters, circuit_name,
+    )
+    current_record_id = record["record_id"]
+    return record
+
+
+def load_saved_circuit(record_id: str) -> tuple[dict, bool]:
+    """Restore a validated record transactionally and redraw from its data."""
+    global circuit_data, counters, current_load, current_analysis, current_record_id
+    record = get_circuit(CIRCUIT_STORAGE_PATH, record_id)
+    if record is None:
+        raise NotFound("Saved circuit was not found.")
+
+    # Validate/rebuild before changing any live server state. The stored PNG is
+    # never input to the model; it remains an archival artifact.
+    snapshot = copy.deepcopy(record["circuit"])
+    restored_counters = dict(record["editor_state"])
+    load = cl.components_loader(snapshot)
+    analysis = al.connection_analyzer(load)
+    circuit_data, counters = snapshot, restored_counters
+    current_load, current_analysis, current_record_id = load, analysis, record["record_id"]
+    redraw()
+    image_available = resolve_diagram_path(CIRCUIT_STORAGE_PATH, record).is_file()
+    return record, image_available
 
 
 
@@ -353,6 +439,67 @@ def calculate():
             "problems": problems
         }), 400
     return jsonify(calculate_json())
+
+
+def circuit_response(record: dict, *, image_available: bool | None = None) -> dict:
+    """Build the document response shared by save, update, and load routes."""
+    if image_available is None:
+        image_available = resolve_diagram_path(CIRCUIT_STORAGE_PATH, record).is_file()
+    return {
+        "record": record,
+        "image_available": image_available,
+        "state": state_json(),
+    }
+
+
+@app.route('/circuits', methods=['GET'])
+def circuits():
+    """List selector metadata; circuit payloads stay behind the detail route."""
+    return jsonify({"circuits": list_circuits(CIRCUIT_STORAGE_PATH)})
+
+
+@app.route('/circuits', methods=['POST'])
+def save_circuit_route():
+    """Save the current circuit as a new document, even with a repeated name."""
+    record = save_current_circuit(body().get("circuit_name"))
+    return jsonify(circuit_response(record)), 201
+
+
+@app.route('/circuits/<record_id>', methods=['GET'])
+def circuit(record_id):
+    """Return one saved document without changing the editable circuit."""
+    record = get_circuit(CIRCUIT_STORAGE_PATH, record_id)
+    if record is None:
+        raise NotFound("Saved circuit was not found.")
+    return jsonify({
+        "record": record,
+        "image_available": resolve_diagram_path(CIRCUIT_STORAGE_PATH, record).is_file(),
+    })
+
+
+@app.route('/circuits/<record_id>', methods=['PUT'])
+def update_circuit_route(record_id):
+    """Update the loaded document; POST /circuits is always save-as-new."""
+    data = body()
+    record = update_current_circuit(record_id, data.get("circuit_name"))
+    return jsonify(circuit_response(record))
+
+
+@app.route('/circuits/<record_id>/load', methods=['POST'])
+def load_circuit_route(record_id):
+    """Restore saved model data into the editable server state."""
+    record, image_available = load_saved_circuit(record_id)
+    response = circuit_response(record, image_available=image_available)
+    if not image_available:
+        response["warning"] = "Saved image is missing; the circuit was redrawn from its data."
+    return jsonify(response)
+
+
+@app.route('/save', methods=['POST'])
+def save():
+    """Compatibility alias; clients must now send a non-empty circuit_name."""
+    record = save_current_circuit(body().get("circuit_name"))
+    return jsonify(circuit_response(record)), 201
 
 #Serve the page and the image
 @app.route('/')
