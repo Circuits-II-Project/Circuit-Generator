@@ -5,6 +5,9 @@ La acción solo se habilita cuando el circuito puede calcularse: conserva los
 componentes, sus valores y nodos, la fuente, tierra, resultados del cálculo y
 una copia PNG del diagrama que ya generó la GUI.
 
+El contrato de nombres, listado, carga y actualización para la GUI está en
+[`circuit-api.md`](circuit-api.md).
+
 ## Ubicación y rutas
 
 Por defecto la GUI crea estos archivos locales, que no se versionan:
