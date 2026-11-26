@@ -275,7 +275,8 @@ def _derive_editor_state(circuit: dict[str, Any]) -> dict[str, Any]:
     nodes = _circuit_nodes(circuit)
     numbered = [int(match.group(1)) for node in nodes if (match := re.fullmatch(r"N(\d+)", node))]
     components = circuit.get("components")
-    last_node = components[-1].get("to_node") if isinstance(components, list) and components else None
+    last_component = components[-1] if isinstance(components, list) and components else None
+    last_node = last_component.get("to_node") if isinstance(last_component, dict) else None
     if not isinstance(last_node, str):
         source = circuit.get("source")
         last_node = source.get("to_node") if isinstance(source, dict) else None
