@@ -1,4 +1,5 @@
 import os
+import threading
 import copy
 import numpy as np
 import re
@@ -510,6 +511,10 @@ def page():
 def image():
     return send_from_directory(os.path.join(HERE, "static"), 'MyCirc_2.png')
 
+@app.route('/quit', methods=['POST'])
+def quit_app():
+    threading.Timer(0.3, lambda: os._exit(0)).start()
+    return jsonify({"ok": True})
 
 # Start empty. No redraw here, so importing the server (tests) never touches the image
 reset_state(draw=False)
