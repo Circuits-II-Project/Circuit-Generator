@@ -84,9 +84,27 @@
         <h2>4. Calculate</h2>
         <ul id="problems"></ul>
         <button id="calculate" onclick="calculate()">Calculate</button>
-        <button id="save-circuit" onclick="saveCircuit()">Save circuit and image</button>
-        <span id="save-status" class="muted"></span>
+        <button id="quit-app" onclick="quitApp()">Quit</button>
         <div id="results"></div>
+    </section>
+
+    <section>
+        <h2>5. Saved circuits</h2>
+        <div class="row">
+            <span class="label">Name</span>
+            <input id="circuit-name" type="text" style="width: 220px">
+        </div>
+        <div class="row">
+            <span class="label">Saved</span>
+            <select id="circuit-list" style="min-width: 220px"></select>
+        </div>
+        <div class="row">
+            <span class="label"></span>
+            <button id="save-new" onclick="saveAsNew()">Save as new</button>
+            <button id="load-circuit" onclick="loadSelected()">Load</button>
+            <button id="update-circuit" onclick="updateLoaded()" disabled>Update</button>
+        </div>
+        <span id="save-status" class="muted"></span>
     </section>
 
     <script>
@@ -112,6 +130,7 @@
         let S = null;                                        // last state from the server
         let draft = {type: null, from: null, to: null, value: null};
         let groundPick = null;
+        let loadedRecordId = null;                           // record_id of the saved circuit we're editing, if any
 
         // ---------- Talking to the server ----------
         async function api(method, url, body) {
@@ -255,12 +274,66 @@
             const data = await api("POST", "/calculate");
             if (data) renderResults(data);
         }
-        async function saveCircuit() {
-            const data = await api("POST", "/save");
-            if (data) {
-                document.getElementById("save-status").textContent =
-                    "Saved image: " + data.diagram_path;
-            }
+        // ---------- Saved circuits ----------
+        async function refreshCircuitList() {
+            const data = await api("GET", "/circuits");
+            if (!data) return;
+            const select = document.getElementById("circuit-list");
+            const previous = select.value;
+            select.replaceChildren(...data.circuits.map(c => {
+                const opt = document.createElement("option");
+                opt.value = c.record_id;
+                opt.textContent = c.circuit_name + (c.image_available ? "" : " (no image)");
+                return opt;
+            }));
+            // Keep whichever circuit was selected, or the one we just loaded/saved
+            if (data.circuits.some(c => c.record_id === loadedRecordId)) select.value = loadedRecordId;
+            else if (data.circuits.some(c => c.record_id === previous)) select.value = previous;
+        }
+
+        function applySavedState(data) {
+            S = data.state;
+            loadedRecordId = S.loaded_record_id;
+            document.getElementById("circuit-name").value = data.record.circuit_name;
+            render();
+            refreshImage();
+        }
+
+        async function saveAsNew() {
+            const name = document.getElementById("circuit-name").value.trim();
+            if (!name) { showError("Give the circuit a name first"); return; }
+            const data = await api("POST", "/circuits", {circuit_name: name});
+            if (!data) return;
+            applySavedState(data);
+            await refreshCircuitList();
+            document.getElementById("save-status").textContent = "Saved as \"" + data.record.circuit_name + "\"";
+        }
+
+        async function loadSelected() {
+            const id = document.getElementById("circuit-list").value;
+            if (!id) { showError("Pick a saved circuit to load"); return; }
+            const data = await api("POST", "/circuits/" + encodeURIComponent(id) + "/load");
+            if (!data) return;
+            applySavedState(data);
+            document.getElementById("save-status").textContent = data.warning || ("Loaded \"" + data.record.circuit_name + "\"");
+        }
+
+        async function updateLoaded() {
+            if (!loadedRecordId) return;
+            const name = document.getElementById("circuit-name").value.trim();
+            const body = name ? {circuit_name: name} : {};
+            const data = await api("PUT", "/circuits/" + encodeURIComponent(loadedRecordId), body);
+            if (!data) return;
+            applySavedState(data);
+            await refreshCircuitList();
+            document.getElementById("save-status").textContent = "Updated \"" + data.record.circuit_name + "\"";
+        }
+
+        // ---------- Quit ----------
+        async function quitApp() {
+            if (!confirm("Close the application?")) return;
+            await api("POST", "/quit");
+            document.body.innerHTML = "<p>You can close this tab now.</p>";
         }
 
         // ---------- Rendering ----------
@@ -361,9 +434,11 @@
                 return li;
             }));
             // Disabled while /check reports problems
-            document.getElementById("calculate").disabled = !(S && S.check.ok);
-            document.getElementById("save-circuit").disabled = !(S && S.check.ok);
-            if (!S || !S.check.ok) document.getElementById("save-status").textContent = "";
+            const ready = !!(S && S.check.ok);
+            document.getElementById("calculate").disabled = !ready;
+            document.getElementById("save-new").disabled = !ready;
+            document.getElementById("update-circuit").disabled = !(ready && loadedRecordId);
+            if (!ready) document.getElementById("save-status").textContent = "";
         }
 
         function render() {
@@ -407,7 +482,13 @@
         // Load whatever the server already has (e.g. after a page refresh)
         (async () => {
             const data = await api("GET", "/state");
-            if (data) { S = data; render(); refreshImage(); } else render();
+            if (data) {
+                S = data;
+                loadedRecordId = S.loaded_record_id;
+                render();
+                refreshImage();
+            } else render();
+            await refreshCircuitList();
         })();
     </script>
 </body>
