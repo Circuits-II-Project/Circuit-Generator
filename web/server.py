@@ -504,6 +504,10 @@ def save():
 
 #Serve the page and the image
 @app.route('/')
+def landing():
+    return send_from_directory(HERE, 'landing.html')
+
+@app.route('/builder')
 def page():
     return send_from_directory(HERE, 'display.html')
 
