@@ -2,115 +2,102 @@
 <head>
     <meta charset="utf-8">
     <title>Circuit Builder</title>
-    <style>
-        body { font-family: sans-serif; margin: 16px; max-width: 1000px; }
-        section { border: 1px solid #ccc; padding: 8px 12px; margin-bottom: 12px; }
-        h2 { font-size: 1.05em; margin: 4px 0 8px; }
-        button { margin: 2px; padding: 4px 10px; border-radius: 5px; }
-        button.on { background: #2b6cb0; color: white; }
-        button:disabled { opacity: 0.4; }
-        .row { margin: 6px 0; }
-        .label { display: inline-block; min-width: 70px; font-weight: bold; }
-        table { border-collapse: collapse; margin-top: 6px; }
-        td, th { border: 1px solid #ccc; padding: 3px 8px; text-align: left; }
-        #error { background: #fde8e8; border: 1px solid #c53030; color: #9b2c2c;
-                 padding: 8px; margin-bottom: 12px; }
-        #problems { color: #9b2c2c; }
-        #circuit { max-width: 100%; }
-        .hidden { display: none; }
-        .muted { color: #777; }
-    </style>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
-    <h1>Circuit Builder</h1>
+    <div id="topbar">
+        <h1 id="brand"><a href="/">Circuit Generator</a></h1>
+        <select id="circuit-list"></select>
+        <button class="btn" id="load-circuit" onclick="loadSelected()">Load</button>
+    </div>
 
     <!-- One place for every error from the server -->
     <div id="error" class="hidden" role="alert"></div>
 
-    <section>
-        <h2>Drawing</h2>
-        <img id="circuit" alt="Circuit drawing">
-        <p id="no-drawing" class="muted">No circuit yet. Add a component below.</p>
-    </section>
+    <div id="scroll-col">
+        <section id="col-center" class="col">
+            <div id="drawing">
+                <img id="circuit" alt="Circuit drawing">
+                <p id="no-drawing" class="muted">No circuit yet. Add a component below.</p>
+            </div>
 
-    <section>
-        <h2>1. Add a part</h2>
-        <div class="row"><span class="label">Type</span><span id="type-buttons"></span></div>
-        <div class="row"><span class="label" id="from-label">From</span><span id="from-buttons"></span></div>
-        <div class="row"><span class="label" id="to-label">To</span><span id="to-buttons"></span></div>
-        <div class="row">
-            <span class="label">Value</span>
-            <button id="minus" onclick="stepValue(-1)">&minus;</button>
-            <strong id="value-text">&mdash;</strong>
-            <button id="plus" onclick="stepValue(1)">+</button>
-            <span id="preset-buttons"></span>
-        </div>
-        <div class="row">
-            <span class="label"></span>
-            <span class="muted">Custom (optional):</span>
-            <input id="custom" type="number" min="0" step="any" style="width: 110px">
-            <span id="custom-unit" class="muted"></span>
-            <button onclick="useCustom()">Use</button>
-        </div>
-        <div class="row">
-            <span class="label"></span>
-            <button id="add" onclick="addPart()">Add</button>
-            <span id="add-hint" class="muted"></span>
-        </div>
-    </section>
+            <div id="picker">
+                <h2>Add a part</h2>
+                <div class="row"><span class="label">Type</span><span id="type-buttons"></span></div>
 
-    <section>
-        <h2>2. Ground</h2>
-        <div class="row">Ground node: <strong id="ground-text">not set</strong>
-            <button id="ground-start" onclick="startGround()">Set ground</button></div>
-        <div id="ground-picker" class="row hidden">
-            Pick a node: <span id="ground-buttons"></span>
-            <button id="ground-confirm" onclick="confirmGround()" disabled>Confirm</button>
-            <button onclick="cancelGround()">Cancel</button>
-        </div>
-    </section>
+                <div id="part-fields">
+                    <div class="row"><span class="label" id="from-label">From</span><span id="from-buttons"></span></div>
+                    <div class="row"><span class="label" id="to-label">To</span><span id="to-buttons"></span></div>
+                    <div class="row">
+                        <span class="label">Value</span>
+                        <button class="btn" id="minus" onclick="stepValue(-1)">&minus;</button>
+                        <strong id="value-text">&mdash;</strong>
+                        <button class="btn" id="plus" onclick="stepValue(1)">+</button>
+                        <span id="preset-buttons"></span>
+                    </div>
+                    <div class="row">
+                        <span class="label"></span>
+                        <span class="muted">Custom (optional):</span>
+                        <input id="custom" type="number" min="0" step="any" style="width: 110px">
+                        <span id="custom-unit" class="muted"></span>
+                        <button class="btn" onclick="useCustom()">Use</button>
+                    </div>
+                </div>
 
-    <section>
-        <h2>3. Parts in the circuit</h2>
-        <table>
-            <thead><tr><th>ID</th><th>Type</th><th>From</th><th>To</th><th>Value</th><th></th></tr></thead>
-            <tbody id="parts"></tbody>
-        </table>
-        <p><button onclick="clearAll()">Clear all</button></p>
-    </section>
+                <div id="ground-fields" class="row hidden">
+                    <span class="label">Ground</span>
+                    Current: <strong id="ground-text">not set</strong>
+                    <div class="row">
+                        <span class="label">Pick node</span>
+                        <span id="ground-buttons"></span>
+                    </div>
+                </div>
 
-    <section>
-        <h2>4. Calculate</h2>
-        <ul id="problems"></ul>
-        <button id="calculate" onclick="calculate()">Calculate</button>
-        <button id="quit-app" onclick="quitApp()">Quit</button>
-        <div id="results"></div>
-    </section>
+                <div class="row">
+                    <span class="label"></span>
+                    <button class="btn" id="add" onclick="addPart()">Add</button>
+                    <span id="add-hint" class="muted"></span>
+                </div>
+            </div>
+        </section>
 
-    <section>
-        <h2>5. Saved circuits</h2>
-        <div class="row">
-            <span class="label">Name</span>
-            <input id="circuit-name" type="text" style="width: 220px">
-        </div>
-        <div class="row">
-            <span class="label">Saved</span>
-            <select id="circuit-list" style="min-width: 220px"></select>
-        </div>
-        <div class="row">
-            <span class="label"></span>
-            <button id="save-new" onclick="saveAsNew()">Save as new</button>
-            <button id="load-circuit" onclick="loadSelected()">Load</button>
-            <button id="update-circuit" onclick="updateLoaded()" disabled>Update</button>
-        </div>
-        <span id="save-status" class="muted"></span>
-    </section>
+        <section id="col-parts" class="col">
+            <h2>Parts in the circuit</h2>
+            <table>
+                <thead><tr><th>ID</th><th>Type</th><th>From</th><th>To</th><th>Value</th><th></th></tr></thead>
+                <tbody id="parts"></tbody>
+            </table>
+            <p><button class="btn" onclick="clearAll()">Clear all</button></p>
+        </section>
+
+        <section id="col-calc" class="col">
+            <h2>Calculate</h2>
+            <ul id="problems"></ul>
+            <button class="btn" id="calculate" onclick="calculate()">Calculate</button>
+            <div id="results"></div>
+
+            <div id="save-quit-group">
+                <div class="row">
+                    <span class="label">Name</span>
+                    <input id="circuit-name" type="text" style="width: 200px">
+                </div>
+                <div class="row">
+                    <button class="btn" id="save-new" onclick="saveAsNew()">Save as new</button>
+                    <button class="btn" id="update-circuit" onclick="updateLoaded()" disabled>Update</button>
+                </div>
+                <span id="save-status" class="muted"></span>
+                <div class="row">
+                    <button class="btn" id="quit-app" onclick="quitApp()">Quit</button>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <script>
-        // ---------- Constants ----------
-        const TYPES = ["resistor", "capacitor", "inductor", "source"];
-        const TYPE_LABEL = {resistor: "Resistor", capacitor: "Capacitor", inductor: "Inductor", source: "Source"};
+        //  Constants 
+        const TYPES = ["resistor", "capacitor", "inductor", "source", "ground"];
+        const TYPE_LABEL = {resistor: "Resistor", capacitor: "Capacitor", inductor: "Inductor", source: "Source", ground: "Ground"};
         const UNIT = {resistor: "Ω", capacitor: "F", inductor: "H", source: "V"};
         const VALUE_FIELD = {resistor: "resistance", capacitor: "capacitance", inductor: "inductance"};
         const PRESETS = {
@@ -126,13 +113,12 @@
         for (let exp = -12; exp <= 9; exp++)
             for (const m of [1, 2.2, 4.7]) LADDER.push(Number((m * 10 ** exp).toPrecision(2)));
 
-        // ---------- State ----------
+        // State 
         let S = null;                                        // last state from the server
-        let draft = {type: null, from: null, to: null, value: null};
-        let groundPick = null;
+        let draft = {type: null, from: null, to: null, value: null, groundNode: null};
         let loadedRecordId = null;                           // record_id of the saved circuit we're editing, if any
 
-        // ---------- Talking to the server ----------
+        // Talking to the server
         async function api(method, url, body) {
             const opts = {method, headers: {}};
             if (body !== undefined) {
@@ -171,7 +157,7 @@
             return true;
         }
 
-        // ---------- Errors ----------
+        // Errors 
         function showError(message, problems) {
             const box = document.getElementById("error");
             box.textContent = message;
@@ -192,7 +178,7 @@
             box.classList.add("hidden");
         }
 
-        // ---------- Small helpers ----------
+        // Small helpers 
         const PREFIXES = [[1e9, "G"], [1e6, "M"], [1e3, "k"], [1, ""], [1e-3, "m"], [1e-6, "µ"], [1e-9, "n"], [1e-12, "p"]];
         function fmt(value, unit) {
             if (value === null || value === undefined || !Number.isFinite(value)) return "—";
@@ -204,6 +190,7 @@
         }
         function button(text, onClick, {on = false, disabled = false} = {}) {
             const b = document.createElement("button");
+            b.className = "btn";
             b.textContent = text;
             b.onclick = onClick;
             b.disabled = disabled;
@@ -215,10 +202,11 @@
         }
         function isValid(v) { return typeof v === "number" && Number.isFinite(v) && v > 0; }
 
-        // ---------- Builder actions ----------
+        // Builder actions 
         function pickType(type) {
-            if (draft.type !== type) draft.value = PRESETS[type][1] ?? PRESETS[type][0];
+            if (type !== "ground" && draft.type !== type) draft.value = PRESETS[type][1] ?? PRESETS[type][0];
             draft.type = type;
+            draft.groundNode = null;
             render();
         }
         function pickFrom(node) {
@@ -229,7 +217,7 @@
         function pickTo(node) { draft.to = node; render(); }
         function setValue(v) { draft.value = v; render(); }
         function stepValue(direction) {
-            if (!draft.type) return;
+            if (!draft.type || draft.type === "ground") return;
             const v = draft.value;
             if (!isValid(v)) { setValue(PRESETS[draft.type][0]); return; }
             const next = direction > 0
@@ -244,37 +232,27 @@
             setValue(v);
         }
         async function addPart() {
+            if (draft.type === "ground") {
+                if (await change("POST", "/ground", {node: draft.groundNode})) draft.groundNode = null;
+                return;
+            }
             const ok = await change("POST", "/add/" + draft.type,
                                     {from_node: draft.from, to_node: draft.to, value: draft.value});
             if (ok) { draft.from = null; draft.to = null; render(); }   // keep type and value for the next part
         }
 
-        // ---------- Ground ----------
-        function startGround() {
-            groundPick = null;
-            document.getElementById("ground-picker").classList.remove("hidden");
-            render();
-        }
-        function cancelGround() {
-            groundPick = null;
-            document.getElementById("ground-picker").classList.add("hidden");
-        }
-        async function confirmGround() {
-            if (await change("POST", "/ground", {node: groundPick})) cancelGround();
-        }
-
-        // ---------- Parts list ----------
+        // Parts list 
         async function removePart(id) { await change("POST", "/remove/" + encodeURIComponent(id)); }
         async function clearAll() {
             if (confirm("Remove every part?")) await change("POST", "/reset");
         }
 
-        // ---------- Calculate ----------
+        // Calculate 
         async function calculate() {
             const data = await api("POST", "/calculate");
             if (data) renderResults(data);
         }
-        // ---------- Saved circuits ----------
+        //  Saved circuits 
         async function refreshCircuitList() {
             const data = await api("GET", "/circuits");
             if (!data) return;
@@ -329,14 +307,14 @@
             document.getElementById("save-status").textContent = "Updated \"" + data.record.circuit_name + "\"";
         }
 
-        // ---------- Quit ----------
+        //  Quit 
         async function quitApp() {
             if (!confirm("Close the application?")) return;
             await api("POST", "/quit");
             document.body.innerHTML = "<p>You can close this tab now.</p>";
         }
 
-        // ---------- Rendering ----------
+        //  Rendering 
         function partsList() {
             // Source first, then components in server order (R1, R2, ..., R10)
             if (!S) return [];
@@ -357,51 +335,61 @@
             // Forget picks that point at nodes that no longer exist (after a remove)
             if (draft.from && draft.from !== NEW && !nodes.includes(draft.from)) draft.from = null;
             if (draft.to && draft.to !== NEW && !nodes.includes(draft.to)) draft.to = null;
+            if (draft.groundNode && !nodes.includes(draft.groundNode)) draft.groundNode = null;
 
             const types = document.getElementById("type-buttons");
             types.replaceChildren(...TYPES.map(t => button(TYPE_LABEL[t], () => pickType(t), {on: draft.type === t})));
 
-            const isSource = draft.type === "source";
-            document.getElementById("from-label").textContent = isSource ? "+ (From)" : "From";
-            document.getElementById("to-label").textContent = isSource ? "− (To)" : "To";
+            const isGround = draft.type === "ground";
+            document.getElementById("part-fields").classList.toggle("hidden", isGround);
+            document.getElementById("ground-fields").classList.toggle("hidden", !isGround);
 
-            const fromBtns = nodes.map(n => button(n, () => pickFrom(n), {on: draft.from === n}));
-            fromBtns.push(button("+ New node", () => pickFrom(NEW), {on: draft.from === NEW}));
-            document.getElementById("from-buttons").replaceChildren(...fromBtns);
+            if (isGround) {
+                document.getElementById("ground-text").textContent = S && S.ground ? S.ground : "not set";
+                document.getElementById("ground-buttons").replaceChildren(
+                    ...nodes.map(n => button(n, () => { draft.groundNode = n; render(); }, {on: draft.groundNode === n})));
+            } else {
+                const isSource = draft.type === "source";
+                document.getElementById("from-label").textContent = isSource ? "+ (From)" : "From";
+                document.getElementById("to-label").textContent = isSource ? "− (To)" : "To";
 
-            // The node picked as From is greyed out in To
-            const toBtns = nodes.map(n => button(n, () => pickTo(n), {on: draft.to === n, disabled: n === draft.from}));
-            toBtns.push(button("+ New node", () => pickTo(NEW), {on: draft.to === NEW}));
-            document.getElementById("to-buttons").replaceChildren(...toBtns);
+                const fromBtns = nodes.map(n => button(n, () => pickFrom(n), {on: draft.from === n}));
+                fromBtns.push(button("+ New node", () => pickFrom(NEW), {on: draft.from === NEW}));
+                document.getElementById("from-buttons").replaceChildren(...fromBtns);
 
-            const unit = draft.type ? UNIT[draft.type] : "";
-            document.getElementById("value-text").textContent = draft.type ? fmt(draft.value, unit) : "—";
-            document.getElementById("custom-unit").textContent = unit;
-            document.getElementById("minus").disabled = !draft.type;
-            document.getElementById("plus").disabled = !draft.type;
-            const presets = draft.type
-                ? PRESETS[draft.type].map(v => button(fmt(v, unit), () => setValue(v), {on: draft.value === v}))
-                : [];
-            document.getElementById("preset-buttons").replaceChildren(...presets);
+                // The node picked as From is greyed out in To
+                const toBtns = nodes.map(n => button(n, () => pickTo(n), {on: draft.to === n, disabled: n === draft.from}));
+                toBtns.push(button("+ New node", () => pickTo(NEW), {on: draft.to === NEW}));
+                document.getElementById("to-buttons").replaceChildren(...toBtns);
+
+                const unit = draft.type ? UNIT[draft.type] : "";
+                document.getElementById("value-text").textContent = draft.type ? fmt(draft.value, unit) : "—";
+                document.getElementById("custom-unit").textContent = unit;
+                document.getElementById("minus").disabled = !draft.type;
+                document.getElementById("plus").disabled = !draft.type;
+                const presets = draft.type
+                    ? PRESETS[draft.type].map(v => button(fmt(v, unit), () => setValue(v), {on: draft.value === v}))
+                    : [];
+                document.getElementById("preset-buttons").replaceChildren(...presets);
+            }
 
             // Block Add until everything is chosen
-            const missing = [];
-            if (!draft.type) missing.push("a type");
-            if (!draft.from) missing.push("a From node");
-            if (!draft.to) missing.push("a To node");
-            if (!isValid(draft.value)) missing.push("a value");
-            document.getElementById("add").disabled = missing.length > 0;
-            document.getElementById("add-hint").textContent = missing.length ? "Pick " + missing.join(", ") : "";
-        }
-
-        function renderGround() {
-            document.getElementById("ground-text").textContent = S && S.ground ? S.ground : "not set";
-            const nodes = nodeNames();
-            document.getElementById("ground-start").disabled = nodes.length === 0;
-            document.getElementById("ground-buttons").replaceChildren(
-                ...nodes.map(n => button(n, () => { groundPick = n; render(); }, {on: groundPick === n})));
-            document.getElementById("ground-confirm").disabled = !groundPick;
-            document.getElementById("ground-confirm").textContent = groundPick ? "Confirm " + groundPick : "Confirm";
+            const addBtn = document.getElementById("add");
+            const hint = document.getElementById("add-hint");
+            if (isGround) {
+                addBtn.textContent = "Set ground";
+                addBtn.disabled = !draft.groundNode;
+                hint.textContent = draft.groundNode ? "" : "Pick a node";
+            } else {
+                addBtn.textContent = "Add";
+                const missing = [];
+                if (!draft.type) missing.push("a type");
+                if (!draft.from) missing.push("a From node");
+                if (!draft.to) missing.push("a To node");
+                if (!isValid(draft.value)) missing.push("a value");
+                addBtn.disabled = missing.length > 0;
+                hint.textContent = missing.length ? "Pick " + missing.join(", ") : "";
+            }
         }
 
         function renderParts() {
@@ -443,7 +431,6 @@
 
         function render() {
             renderBuilder();
-            renderGround();
             renderParts();
             renderCheck();
         }
